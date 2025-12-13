@@ -68,7 +68,7 @@ static void _TreeDestroy(node_t *tree, size_t *call_count)
 	_TreeDestroy(tree->right, call_count);
 	
 
-	tree->data.type = T_NUM;
+	tree->data.type = TP_NUM;
 	tree->data.val.var = 0;
 	tree->prev = NULL;
 	tree->left = tree->right = NULL;
@@ -231,21 +231,3 @@ void TreeDestroy(node_t *tree)
 	_TreeDestroy(tree, &call_counts);
 }
 
-void TokensDestroy(tokens_t *tokens)
-{
-	if(tokens == NULL)
-		return;
-
-	for (size_t i = 0; i < tokens->n_tok; i++)
-	{
-		if(tokens->tok[i].data.type == T_VAR)
-		{
-			free(tokens->tok[i].data.val.var);
-			tokens->tok[i].data.val.var = NULL;
-		}
-	}
-
-	free(tokens->tok);
-	tokens->tok = NULL;
-	free(tokens);
-}

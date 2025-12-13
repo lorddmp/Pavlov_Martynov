@@ -14,16 +14,17 @@
 
 typedef enum node_type_t
 {
-	T_NUM,
-	T_OP,
-	T_VAR,
-	T_KWORD,
-	T_SYMB,
-	
+	TP_NUM,
+	TP_OP,
+	TP_VAR,
+	TP_KWORD,
+	TP_SYMB,
+	TP_FUNC,
 
 } node_type_t;
 static const char *NODE_TYPE_NAME[] =
-	{"number", "operation", "variable", "keyword", "symbol"};
+	{"number", "operation", "variable", "keyword", "symbol", "function"};
+
 
 typedef enum op_t
 {
@@ -72,7 +73,8 @@ static const char *SYMB_NAME[] =
 
 typedef union node_val_t
 {
-	char *var;
+	char *name;
+	size_t var;
 	long num;
 	op_t op;
 	symb_t symb;
@@ -90,9 +92,17 @@ typedef struct node_data_t
 typedef struct node_t
 {
 	node_data_t data;
+	struct node_t *parent;
+	struct child_t *child;
 
-	struct node_t *prev, *left, *right;
 } node_t;
+
+typedef struct child_t
+{
+	node_t *node;
+	struct child_t *prev, *next;
+	
+} child_t;
 
 typedef struct lex_t
 {
@@ -100,40 +110,51 @@ typedef struct lex_t
 	const node_data_t data;
 } lex_t;
 
-typedef struct tokens_t
+typedef struct toks_t
 {
-	node_t *tok;
-	size_t n_tok;
-} tokens_t;
+	node_data_t *data;
+	size_t size;
+	size_t cap;
+
+} toks_t;
 
 #include "DSLdef.h"
 
 static const lex_t LEXS[] =
 	{
-		{"{", {.type = T_SYMB, .val.symb = SYM_BRC_OPN}},
-		{"}", {.type = T_SYMB, .val.symb = SYM_BRC_CLS}},
-		{"(", {.type = T_SYMB, .val.symb = SYM_PAR_OPN}},
-		{")", {.type = T_SYMB, .val.symb = SYM_PAR_CLS}},
-		{";", {.type = T_SYMB, .val.symb = SYM_SEMICOL}},
-		{",", {.type = T_SYMB, .val.symb = SYM_COMMA}},
+		{"{", {.type = TP_SYMB, .val.symb = SYM_BRC_OPN}},
+		{"}", {.type = TP_SYMB, .val.symb = SYM_BRC_CLS}},
+		{"(", {.type = TP_SYMB, .val.symb = SYM_PAR_OPN}},
+		{")", {.type = TP_SYMB, .val.symb = SYM_PAR_CLS}},
+		{";", {.type = TP_SYMB, .val.symb = SYM_SEMICOL}},
+		{",", {.type = TP_SYMB, .val.symb = SYM_COMMA}},
 		
-		{"==", {.type = T_OP, .val.op = OP_EQ}},
-		{"=", {.type = T_OP, .val.op = OP_ASSIGN}},
-		{"+", {.type = T_OP, .val.op = OP_ADD}},
-		{"-", {.type = T_OP, .val.op = OP_SUB}},
-		{">", {.type = T_OP, .val.op = OP_GREATER}},
-		{"<", {.type = T_OP, .val.op = OP_GREATER}},
-		{"*", {.type = T_OP, .val.op = OP_MUL}},
-		{"/", {.type = T_OP, .val.op = OP_DIV}},
-		{"or", {.type = T_OP, .val.op = OP_OR}},
-		{"and", {.type = T_OP, .val.op = OP_AND}},
+		{"==", {.type = TP_OP, .val.op = OP_EQ}},
+		{"=", {.type = TP_OP, .val.op = OP_ASSIGN}},
+		{"+", {.type = TP_OP, .val.op = OP_ADD}},
+		{"-", {.type = TP_OP, .val.op = OP_SUB}},
+		{">", {.type = TP_OP, .val.op = OP_GREATER}},
+		{"<", {.type = TP_OP, .val.op = OP_GREATER}},
+		{"*", {.type = TP_OP, .val.op = OP_MUL}},
+		{"/", {.type = TP_OP, .val.op = OP_DIV}},
+		{"or", {.type = TP_OP, .val.op = OP_OR}},
+		{"and", {.type = TP_OP, .val.op = OP_AND}},
 		
-		{"if", {.type = T_KWORD, .val.kword = KW_IF}},
-		{"else", {.type = T_KWORD, .val.kword = KW_ELSE}},
-		{"while", {.type = T_KWORD, .val.kword = KW_WHILE}},
-		{"for", {.type = T_KWORD, .val.kword = KW_FOR}},
-		{"asm", {.type = T_KWORD, .val.kword = KW_ASM}}
+		{"if", {.type = TP_KWORD, .val.kword = KW_IF}},
+		{"else", {.type = TP_KWORD, .val.kword = KW_ELSE}},
+		{"while", {.type = TP_KWORD, .val.kword = KW_WHILE}},
+		{"for", {.type = TP_KWORD, .val.kword = KW_FOR}},
+		{"asm", {.type = TP_KWORD, .val.kword = KW_ASM}}
 };
+
+typedef enum tree_err_t
+{
+	TR_NO_ERR,
+	TR_EXT_ERR,
+	TR_NULLPTR,
+	TR_OVERFLOW,
+
+} tree_err_t;
 
 #include "DSLundef.h"
 
@@ -143,11 +164,15 @@ static const size_t MAX_REC_DEPTH = 100;
 /*--------------------------------------*/
 
 long ReadFileToBuf(const char *file_path, char **buf);
+//
+//node_t *NewNode(const node_data_t data, node_t *left, node_t *right);
+//node_t *TreeCopy(const node_t *tree);
+//node_t *FindNode(node_t *tree, const node_data_t data);
 
-node_t *NewNode(const node_data_t data, node_t *left, node_t *right);
-node_t *TreeCopy(const node_t *tree);
-node_t *FindNode(node_t *tree, const node_data_t data);
+toks_t *Tokenize(const char *s);
 
-tokens_t *Tokenize(const char *s);
+void TokensDestroy(toks_t *toks);
 
-void TokensDestroy(tokens_t *tokens);
+//tree_err_t TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
+
+void PrintToks(toks_t *toks, FILE *dump_file);

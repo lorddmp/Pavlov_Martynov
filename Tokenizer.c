@@ -1,22 +1,18 @@
 #include "NCC.h"
 
-static void TokensRealloc(tokens_t *tokens, const size_t need_n)
+static void TokRealloc(toks_t *toks)
 {
-	assert(tokens);
+	assert(toks);
 	
-	// if(tokens->n_tok == 0)
-	// {
-	// 	tokens->tok = (node_t *)calloc(need_n, sizeof(node_t));
-	// 	assert(tokens->tok);
-
-	// 	tokens->n_tok = need_n;
-	// }
-	if(tokens->n_tok <= need_n)
+	if(toks->size + 1 >= toks->cap)
 	{
-		tokens->tok = (node_t *)reallocarray(tokens->tok, need_n * 2, sizeof(node_t));
-		assert(tokens->tok);
-
-		tokens->n_tok = need_n * 2;
+		toks->cap = 2 * (toks->size + 1);
+		toks->data = (node_data_t *)reallocarray(toks->data, toks->cap, sizeof(node_data_t));
+		if(toks->data == NULL)
+		{
+			print_err_msg("tokens overflow");
+			abort();
+		}
 	}
 }
 
@@ -49,9 +45,9 @@ static int SkipComments(const char **s)
 	return 1;
 }
 
-static int Lexem(node_t *new_node, const char **s)
+static int Lexem(toks_t *toks, const char **s)
 {
-	assert(new_node);
+	assert(toks);
 	assert(s);
 	assert(*s);
 
@@ -59,7 +55,7 @@ static int Lexem(node_t *new_node, const char **s)
 	{
 		if(strncmp(LEXS[i].name, *s, strlen(LEXS[i].name)) == 0)
 		{
-			new_node->data = LEXS[i].data;
+			toks->data[toks->size++] = LEXS[i].data;
 			(*s) += strlen(LEXS[i].name);
 			return 1;
 		}
@@ -68,9 +64,9 @@ static int Lexem(node_t *new_node, const char **s)
 	return 0;
 }
 
-static int Number(node_t *new_node, const char **s)
+static int Number(toks_t *toks, const char **s)
 {
-	assert(new_node);
+	assert(toks);
 	assert(s);
 	assert(*s);
 
@@ -86,14 +82,14 @@ static int Number(node_t *new_node, const char **s)
 	if(*s == old_s)
 		return 0;
 
-	new_node->data = (const node_data_t){.type = T_NUM, .val.num = num};
+	toks->data[toks->size++] = (const node_data_t){.type = TP_NUM, .val.num = num};
 
 	return 1;
 }
 
-static int Ident(node_t *new_node, const char **s)
+static int Ident(toks_t *toks, const char **s)
 {
-	assert(new_node);
+	assert(toks);
 	assert(s);
 	assert(*s);
 	
@@ -101,11 +97,11 @@ static int Ident(node_t *new_node, const char **s)
 		return 0;
 
 	int var_len = 0;
-	node_data_t data = {.type = T_VAR};
-	if (sscanf(*s, "%m[A-Za-z0-9_]%n", &(data.val.var), &var_len) > 0)
+	node_data_t data = {.type = TP_VAR};
+	if (sscanf(*s, "%m[A-Za-z0-9_]%n", &(data.val.name), &var_len) > 0)
 	{
 		(*s) += var_len;
-		new_node->data = data;
+		toks->data[toks->size++] = data;
 
 		return 1;
 	}
@@ -113,38 +109,85 @@ static int Ident(node_t *new_node, const char **s)
 	return 0;
 }
 
-tokens_t *Tokenize(const char *s)
+toks_t *Tokenize(const char *s)
 {
 	assert(s);
 
-	tokens_t *tokens = (tokens_t *)calloc(1, sizeof(tokens_t));
-	tokens->tok = (node_t *)calloc(1, sizeof(node_t));
-	assert(tokens->tok);
-	tokens->n_tok = 1;
+	toks_t *toks = (toks_t *)calloc(1, sizeof(toks_t));
+	assert(toks);
 
-	size_t n_tok = 0;
 	while(*s > 0)
 	{
-		TokensRealloc(tokens, n_tok + 1);
+		TokRealloc(toks);
 
-		if (SkipComments(&s))
-			;
-		else if(Lexem(&(tokens->tok[n_tok]), &s))
-			n_tok++;
-		else if(Number(&(tokens->tok[n_tok]), &s))
-			n_tok++;
-		else if(Ident(&(tokens->tok[n_tok]), &s))
-			n_tok++;
+		if (SkipComments(&s));
+		else if(Lexem(toks, &s));
+		else if(Number(toks, &s));
+		else if(Ident(toks, &s));
 		else
 		{
 			print_err_msg("syntax error");
-			fprintf(stderr, colorize("-->", _BOLD_ _YELLOW_) colorize("%20s\n\n", _CYAN_), s);
+			fprintf(stderr, colorize("-->", _BOLD_ _YELLOW_) colorize("%.20s...\n\n", _CYAN_), s);
 			return NULL;
 		}
 	}
 
-	tokens->n_tok = n_tok;
-
-	return tokens;
+	return toks;
 }
 
+void TokensDestroy(toks_t *toks)
+{
+	if(toks == NULL)
+		return;
+
+	for (size_t i = 0; i < toks->size; i++)
+	{
+		if(toks->data[i].type == TP_VAR)
+		{
+			free(toks->data[i].val.name);
+			toks->data[i].val.name = NULL;
+		}
+	}
+
+	free(toks->data);
+	toks->data = NULL;
+	toks->size = toks->cap = 0;
+	free(toks); /* dubiously, but ok */
+}
+
+void PrintToks(toks_t *toks, FILE *dump_file)
+{
+	if(toks == NULL || dump_file == NULL)
+	{
+		print_err_msg("nullptr passed as argument(s)");
+		return;
+	}
+	
+	for (size_t i = 0; i < toks->size; i++)
+	{
+		fprintf(dump_file, "[%lu]\t", i);
+		switch (toks->data[i].type)
+		{
+		case TP_FUNC:
+		case TP_VAR:
+			fprintf(dump_file, "{%s}", toks->data[i].val.name);
+			break;
+		case TP_KWORD:
+			fprintf(dump_file, "%s", KWORD_NAME[(int)toks->data[i].val.kword]);
+			break;
+		case TP_NUM:
+			fprintf(dump_file, "%ld", toks->data[i].val.num);
+			break;
+		case TP_OP:
+			fprintf(dump_file, "%s", OP_NAME[(int)toks->data[i].val.op]);
+			break;
+		case TP_SYMB:
+			fprintf(dump_file, "%s", SYMB_NAME[(int)toks->data[i].val.symb]);
+			break;
+		default:
+			print_err_msg("\ndatatype is out of range 'node_type_t'");
+			break;
+		}
+		fputc('\n', dump_file);
+	}
+}
