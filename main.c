@@ -14,7 +14,7 @@ int main(void)
 
 	PrintToks(toks, stdout);
 
-	TokensDestroy(toks);
+	ToksDestroy(toks);
 	free(s);
 
 	return 0;

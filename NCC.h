@@ -14,16 +14,20 @@
 
 typedef enum node_type_t
 {
+	TP_EOF,
+	TP_ROOT,
 	TP_NUM,
 	TP_OP,
+	TP_OP_SEQ,
 	TP_VAR,
 	TP_KWORD,
 	TP_SYMB,
 	TP_FUNC,
+	TP_LITERAL,
 
 } node_type_t;
 static const char *NODE_TYPE_NAME[] =
-	{"number", "operation", "variable", "keyword", "symbol", "function"};
+	{"eof", "root", "number", "operation", "op. sequence", "variable", "keyword", "symbol", "function"};
 
 
 typedef enum op_t
@@ -52,24 +56,29 @@ typedef enum kword_t
 	
 	KW_WHILE,
 	KW_FOR,
+	
+	KW_CONTINUE,
+	KW_BREAK,
+	
 	KW_ASM,
 
 } kword_t;
 static const char *KWORD_NAME[] =
-	{"if", "else", "while", "for", "asm"};
+	{"if", "else", "while", "for", "continue", "break", "asm"};
 
 typedef enum symb_t
 {
-	SYM_BRC_OPN,
-	SYM_BRC_CLS,
-	SYM_PAR_OPN,
-	SYM_PAR_CLS,
+	SYM_OPN_BRC,
+	SYM_CLS_BRC,
+	SYM_OPN_PAR,
+	SYM_CLS_PAR,
 	SYM_SEMICOL,
 	SYM_COMMA,
+	SYM_QUOTE
 
 } symb_t;
 static const char *SYMB_NAME[] =
-	{"{", "}", "(", ")", ";", ","};
+	{"{", "}", "(", ")", ";", ",", "\""};
 
 typedef union node_val_t
 {
@@ -118,34 +127,36 @@ typedef struct toks_t
 
 } toks_t;
 
-#include "DSLdef.h"
+#include "ShortNamesDef.h"
 
 static const lex_t LEXS[] =
 	{
-		{"{", {.type = TP_SYMB, .val.symb = SYM_BRC_OPN}},
-		{"}", {.type = TP_SYMB, .val.symb = SYM_BRC_CLS}},
-		{"(", {.type = TP_SYMB, .val.symb = SYM_PAR_OPN}},
-		{")", {.type = TP_SYMB, .val.symb = SYM_PAR_CLS}},
-		{";", {.type = TP_SYMB, .val.symb = SYM_SEMICOL}},
-		{",", {.type = TP_SYMB, .val.symb = SYM_COMMA}},
+		{"{", OPN_BRC},
+		{"}", CLS_BRC},
+		{"(", OPN_PAR},
+		{")", CLS_PAR},
+		{";", SEMICOLON},
+		{",", COMMA},
 		
-		{"==", {.type = TP_OP, .val.op = OP_EQ}},
-		{"=", {.type = TP_OP, .val.op = OP_ASSIGN}},
-		{"+", {.type = TP_OP, .val.op = OP_ADD}},
-		{"-", {.type = TP_OP, .val.op = OP_SUB}},
-		{">", {.type = TP_OP, .val.op = OP_GREATER}},
-		{"<", {.type = TP_OP, .val.op = OP_GREATER}},
-		{"*", {.type = TP_OP, .val.op = OP_MUL}},
-		{"/", {.type = TP_OP, .val.op = OP_DIV}},
-		{"or", {.type = TP_OP, .val.op = OP_OR}},
-		{"and", {.type = TP_OP, .val.op = OP_AND}},
+		{"==", EQ},
+		{"=", ASSIGN},
+		{"+", ADD},
+		{"-", SUB},
+		{">", GREATER},
+		{"<", LESS},
+		{"*", MUL},
+		{"/", DIV},
+		{"or", OR},
+		{"and", AND},
 		
-		{"if", {.type = TP_KWORD, .val.kword = KW_IF}},
-		{"else", {.type = TP_KWORD, .val.kword = KW_ELSE}},
-		{"while", {.type = TP_KWORD, .val.kword = KW_WHILE}},
-		{"for", {.type = TP_KWORD, .val.kword = KW_FOR}},
-		{"asm", {.type = TP_KWORD, .val.kword = KW_ASM}}
+		{"if", IF},
+		{"else", ELSE},
+		{"while", WHILE},
+		{"for", FOR},
+		{"asm", ASM}
 };
+
+//#include "ShortNamesUndef.h"
 
 typedef enum tree_err_t
 {
@@ -171,8 +182,15 @@ long ReadFileToBuf(const char *file_path, char **buf);
 
 toks_t *Tokenize(const char *s);
 
-void TokensDestroy(toks_t *toks);
+void ToksDestroy(toks_t *toks);
 
 //tree_err_t TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
 
-void PrintToks(toks_t *toks, FILE *dump_file);
+void PrintToks(node_data_t data[], FILE *dump_file);
+node_t *NewNode(const node_data_t data);
+void AddChild(node_t *node, node_t *new_child);
+void TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
+
+node_t *Parse(toks_t *toks);
+//node_t *BIN(const node_data_t data, node_t *l_val, node_t *r_val);
+
