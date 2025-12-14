@@ -19,6 +19,9 @@ typedef enum node_type_t
 	TP_NUM,
 	TP_OP,
 	TP_OP_SEQ,
+	
+	//TP_EXPR,
+	
 	TP_VAR,
 	TP_KWORD,
 	TP_SYMB,
@@ -27,7 +30,7 @@ typedef enum node_type_t
 
 } node_type_t;
 static const char *NODE_TYPE_NAME[] =
-	{"eof", "root", "number", "operation", "op. sequence", "variable", "keyword", "symbol", "function"};
+	{"eof", "root", "number", "operation", "op. sequence", /*"expression",*/ "variable", "keyword", "symbol", "function", "literal"};
 
 
 typedef enum op_t
@@ -193,4 +196,5 @@ void TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img
 
 node_t *Parse(toks_t *toks);
 //node_t *BIN(const node_data_t data, node_t *l_val, node_t *r_val);
+void TreeDestroy(node_t *tree);
 

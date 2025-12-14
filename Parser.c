@@ -68,8 +68,8 @@ static node_t *GetOp(node_data_t *data[]);
 static node_t *GetWhileIf(node_data_t *data[], const node_data_t while_or_if);
 static node_t *GetAsm(node_data_t *data[]);
 static node_t *GetAssign(node_data_t *data[]);
-static node_t *GetLongLogExpr(node_data_t *data[]);
-static node_t *GetLogExpr(node_data_t *data[]);
+//static node_t *GetLongLogExpr(node_data_t *data[]);
+//static node_t *GetLogExpr(node_data_t *data[]);
 static node_t *GetExpr(node_data_t *data[]);
 static node_t *GetTemp(node_data_t *data[]);
 static node_t *GetPrior(node_data_t *data[]);
@@ -90,29 +90,28 @@ node_t *Parse(toks_t *toks)
 	node_t *node = NewNode(ROOT);
 	assert(node);
 
-	node_data_t *start_data = toks->data;
-	node_t *new_node = GetOp(&(toks->data));
+	node_data_t *data = toks->data;
+	node_t *new_node = GetOp(&(data));
 	if(new_node == NULL)
 	{
 		print_err_msg("Compilation failed");
-		free(node);
+		TreeDestroy(node);
 		return NULL;
 	}
-
 
 	do
 	{
 		AddChild(node, new_node);
-		new_node = GetOp(&(toks->data));
+		new_node = GetOp(&(data));
 	} while (new_node);
 
-	if(toks->data->type == TP_EOF)
+	if(data->type == TP_EOF)
 		return node;
 
 	print_err_msg("syntax error:");
 	fprintf(stderr, colorize("\tcompile stopped here:", _BOLD_ _YELLOW_));
-	PrintToks(toks->data, stderr);
-	free(node);
+	PrintToks(data, stderr);
+	TreeDestroy(node);
 	return NULL;
 }
 
@@ -127,6 +126,7 @@ static node_t *GetOp(node_data_t *data[])
 
 	if((new_node = GetAssign(data)) && IS_(SEMICOLON, data))
 	{
+		(*data)++;
 		AddChild(node, new_node);
 	}
 	else if((new_node = GetWhileIf(data, IF)) || (new_node = GetWhileIf(data, WHILE)))
@@ -135,26 +135,32 @@ static node_t *GetOp(node_data_t *data[])
 	}
 	else if(IS_(OPN_BRC, data))
 	{
-		*(data)++;
+		(*data)++;
 
 		new_node = GetOp(data);
 		if(new_node == NULL)
 		{
 			print_err_msg("syntax error: -->");
 			PrintToks(*data, stderr);
+			TreeDestroy(node);
 			return NULL;
 		}
 
 		do
 		{
 			AddChild(node, new_node);
-			node = GetOp(data);
-		} while (node);
+			new_node = GetOp(data);
+		} while (new_node);
 		
-		if(!IS_(CLS_BRC, data))
+		if(IS_(CLS_BRC, data))
+		{
+			(*data)++;
+		}
+		else
 		{
 			print_err_msg("missing '}': -->");
 			PrintToks(*data, stderr);
+			TreeDestroy(node);
 			return NULL;
 		}
 	}
@@ -164,8 +170,9 @@ static node_t *GetOp(node_data_t *data[])
 	}
 	else
 	{
-		print_err_msg("syntax error: -->");
-		PrintToks(*data, stderr);
+		//print_err_msg("syntax error: -->");
+		//PrintToks(*data, stderr);
+		TreeDestroy(node);
 		return NULL;
 	}
 
@@ -187,7 +194,7 @@ static node_t *GetWhileIf(node_data_t *data[], const node_data_t while_or_if)
 		if(IS_(OPN_PAR, data))
 		{
 			(*data)++;
-			if((new_node = GetLongLogExpr(data)) && IS_(CLS_PAR, data))
+			if((new_node = GetExpr(data)) && IS_(CLS_PAR, data))
 			{
 				(*data)++;
 				AddChild(node, new_node);
@@ -205,7 +212,10 @@ static node_t *GetWhileIf(node_data_t *data[], const node_data_t while_or_if)
 			print_err_msg("missing '('");
 	}
 	else
+	{
+		TreeDestroy(node);
 		return NULL;
+	}
 
 	return node;
 }
@@ -225,7 +235,7 @@ static node_t *GetAssign(node_data_t *data[])
 		if(IS_(ASSIGN, data))
 		{
 			(*data)++;
-			if(new_node = GetLongLogExpr(data))
+			if(new_node = GetExpr(data))
 			{
 				AddChild(node, new_node);
 			}
@@ -236,15 +246,134 @@ static node_t *GetAssign(node_data_t *data[])
 			print_err_msg("missing assign");
 	}
 	else
+	{
+		TreeDestroy(node);
 		return NULL;
+	}
 
 	return node;
 }
 
-static node_t *GetLongLogExpr(node_data_t *data[])
+static node_t *GetExpr(node_data_t *data[])
+{
+	assert(data);
+	assert(*data);
+
+	node_t *new_node = NULL, *arg_node = NULL;
+	node_t *node = GetTemp(data);
+	if(node == NULL)
+		return NULL;
+	
+	while(IS_(ADD, data) || IS_(SUB, data))
+	{
+		new_node = NewNode(**data);
+		assert(new_node);
+		(*data)++;
+
+		AddChild(new_node, node);
+		arg_node = GetTemp(data);
+		if(arg_node == NULL)
+		{
+			TreeDestroy(node);
+			TreeDestroy(new_node);
+			return NULL;
+		}
+
+		AddChild(new_node, arg_node);
+		node = new_node;
+	}
+
+	return node;
+}
+
+static node_t *GetTemp(node_data_t *data[])
+{
+	assert(data);
+	assert(*data);
+
+	node_t *new_node = NULL, *arg_node = NULL;
+	node_t *node = GetPrior(data);
+	if(node == NULL)
+		return NULL;
+	
+	while(IS_(MUL, data) || IS_(DIV, data))
+	{
+		new_node = NewNode(**data);
+		assert(new_node);
+		(*data)++;
+
+		AddChild(new_node, node);
+		arg_node = GetPrior(data);
+		if(arg_node == NULL)
+		{
+			TreeDestroy(node);
+			TreeDestroy(new_node);
+			return NULL;
+		}
+
+		AddChild(new_node, arg_node);
+		node = new_node;
+	}
+
+	return node;
+}
+
+static node_t *GetPrior(node_data_t *data[])
+{
+	assert(data);
+	assert(*data);
+
+	node_t *node = NULL;
+
+	if(IS_(OPN_PAR, data))
+	{
+		(*data)++;
+		if(node = GetExpr(data))
+		{
+			if(IS_(CLS_PAR, data))
+			{
+				(*data)++;
+			}
+			else
+				print_err_msg("missing ')'");
+		}
+		else
+			print_err_msg("missing expression");
+	}
+	else if(node = GetNum(data));
+	else
+		node = GetVar(data);
+
+	return node;
+}
+
+static node_t *GetNum(node_data_t *data[])
 {
 	assert(data);
 	assert(*data);
 	
-	node_t *node=
+	if((**data).type == TP_NUM)
+	{
+		node_t *node = NewNode(**data);
+		(*data)++;
+		return node;
+	}
+
+	return NULL;
 }
+
+static node_t *GetVar(node_data_t *data[])
+{
+	assert(data);
+	assert(*data);
+	
+	if((**data).type == TP_VAR)
+	{
+		node_t *node = NewNode(**data);
+		(*data)++;
+		return node;
+	}
+
+	return NULL;
+}
+

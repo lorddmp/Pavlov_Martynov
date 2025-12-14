@@ -200,33 +200,34 @@ void PrintToks(node_data_t data[], FILE *dump_file)
 		return;
 	}
 	
-	for (size_t i = 0; data[i].type != TP_EOF; i++)
+	for (size_t i = 0; ; i++)
 	{
 		fprintf(dump_file, "[%lu]\t", i);
 		switch (data[i].type)
 		{
 		case TP_FUNC:
 		case TP_VAR:
-			fprintf(dump_file, "{%s}", data[i].val.name);
+			fprintf(dump_file, "var or f {%s}", data[i].val.name);
 			break;
 		case TP_KWORD:
-			fprintf(dump_file, "%s", KWORD_NAME[(int)data[i].val.kword]);
+			fprintf(dump_file, "kword %s", KWORD_NAME[(int)data[i].val.kword]);
 			break;
 		case TP_NUM:
-			fprintf(dump_file, "%ld", data[i].val.num);
+			fprintf(dump_file, "num %ld", data[i].val.num);
 			break;
 		case TP_OP:
-			fprintf(dump_file, "%s", OP_NAME[(int)data[i].val.op]);
+			fprintf(dump_file, "op %s", OP_NAME[(int)data[i].val.op]);
 			break;
 		case TP_SYMB:
-			fprintf(dump_file, "%s", SYMB_NAME[(int)data[i].val.symb]);
+			fprintf(dump_file, "symb %s", SYMB_NAME[(int)data[i].val.symb]);
 			break;
 		case TP_LITERAL:
-			fprintf(dump_file, "{%s}", data[i].val.name);
+			fprintf(dump_file, "lit {%s}", data[i].val.name);
 			break;
 		case TP_EOF:
-			fprintf(dump_file, "EOF reached\n");
-			break;
+			fprintf(dump_file, "EOF\n");
+			return;
+		case TP_OP_SEQ:
 		default:
 			print_err_msg("datatype is out of range 'node_type_t'");
 			break;

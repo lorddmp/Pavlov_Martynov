@@ -7,20 +7,20 @@ CC = gcc
 
 all: main
 
-main: main.o Input.o Tokenizer.o
-	$(CC) $(linker_flags) main.o Tokenizer.o Input.o
+main: main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o
+	$(CC) $(linker_flags) main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o
 
-#TreeDump.o: TreeDump.c
+TreeDump.o: TreeDump.c
 
 main.o: main.c
 
 Input.o: Input.c
 
-#Tree.o: Tree.c
+Tree.o: Tree.c
 
 Tokenizer.o: Tokenizer.c
 
-#TreeDump.o: TreeDump.c
+Parser.o: Parser.c
 
 clean:
 	rm *.o

@@ -27,12 +27,15 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 		data_s = SYMB_NAME[(int)data.val.symb];
 		break;
 	case TP_VAR:
-		data_s = NULL;
+		data_s = data.val.name;
 		data_num = (long)data.val.var;
 		break;
 	case TP_FUNC:
 	case TP_LITERAL:
 		data_s = data.val.name;
+	case TP_ROOT:
+	case TP_OP_SEQ:
+		break;
 	default:
 		data_s = "??";
 		break;
@@ -83,7 +86,7 @@ static void PrintDigraphNode(const node_t *node, FILE *dot_file, size_t *call_co
 			else
 				fprintf(dot_file, "label%lu->label%lu [color=red]\n", (size_t)node, (size_t)child->node);
 
-			PrintDigraphNode(child, dot_file, call_count);
+			PrintDigraphNode(child->node, dot_file, call_count);
 			child = child->next;
 		}
 	}

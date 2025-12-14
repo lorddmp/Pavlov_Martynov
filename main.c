@@ -12,8 +12,12 @@ int main(void)
 	assert(toks);
 	assert(toks->data);
 
-	PrintToks(toks, stdout);
+	PrintToks(toks->data, stdout);
+	node_t *tree = Parse(toks);
+	assert(tree);
+	TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "test");
 
+	TreeDestroy(tree);
 	ToksDestroy(toks);
 	free(s);
 

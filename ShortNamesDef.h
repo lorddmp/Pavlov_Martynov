@@ -4,6 +4,8 @@
 
 #define ROOT		(const node_data_t){.type = TP_ROOT, .val.num = 0}
 #define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
+#define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
+//#define EXPR		(const node_data_t){.type = TP_EXPR, .val.num = 0}
 
 #define OPN_BRC		(const node_data_t){.type = TP_SYMB, .val.symb = SYM_OPN_BRC}
 #define CLS_BRC 	(const node_data_t){.type = TP_SYMB, .val.symb = SYM_CLS_BRC}
@@ -26,6 +28,8 @@
 #define WHILE 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_WHILE}
 #define FOR 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_FOR}
 #define ASM 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_ASM}
+
+
 
 #define IS_(short_name, ptr_to_arr) (!memcmp(&(short_name), *(ptr_to_arr), sizeof(node_data_t)))
 

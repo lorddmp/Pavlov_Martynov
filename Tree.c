@@ -44,17 +44,21 @@ void TreeDestroy(node_t *tree)
 	if(tree->child)
 	{
 		child_t *child = tree->child;
-		while(child->next)
+		child_t *prev = NULL;
+		while (child)
 		{
+			//free(child->prev);
+			child->prev = NULL;
+			
 			TreeDestroy(child->node);
 			child->node = NULL;
+			prev = child;
 			child = child->next;
+			free(prev);
 		}
-		TreeDestroy(child->node);
-		child->node = NULL;
-		
-		while(child)
-		
 	}
-	
+
+	free(tree);
 }
+
+
