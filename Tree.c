@@ -15,6 +15,8 @@ void AddChild(node_t *node, node_t *new_child)
 	assert(node);
 	assert(new_child);
 
+	new_child->parent = node;
+
 	if(node->child == NULL)
 	{
 		node->child = (child_t *)calloc(1, sizeof(child_t));

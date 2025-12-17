@@ -49,7 +49,7 @@ typedef enum op_t
 
 } op_t;
 static const char *OP_NAME[] =
-	{"+", "-", "*", "/", ">", "<", "=", "==", "or", "and"};
+	{"+", "-", "*", "/", "\\>", "\\<", "=", "==", "or", "and"};
 
 typedef enum kword_t
 {

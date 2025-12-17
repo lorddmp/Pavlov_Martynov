@@ -21,8 +21,10 @@ static int SkipComments(const char **s)
 	assert(s);
 	assert(*s);
 
-	while(isspace(**s))
-			(*s)++;
+	const char *old_s = *s;
+	
+	while (isspace(**s))
+		(*s)++;
 		
 	if(strncmp(*s, "/*", 2) == 0)
 	{
@@ -39,7 +41,10 @@ static int SkipComments(const char **s)
 		else
 			return 0;
 	}
-	else
+	// else
+	// 	return 0;
+
+	if(*s == old_s)
 		return 0;
 
 	return 1;

@@ -4,7 +4,7 @@
 
 #define ROOT		(const node_data_t){.type = TP_ROOT, .val.num = 0}
 #define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
-#define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
+//#define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
 //#define EXPR		(const node_data_t){.type = TP_EXPR, .val.num = 0}
 
 #define OPN_BRC		(const node_data_t){.type = TP_SYMB, .val.symb = SYM_OPN_BRC}
