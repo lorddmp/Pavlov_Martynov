@@ -30,6 +30,7 @@
 #define WHILE 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_WHILE}
 #define FOR 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_FOR}
 #define ASM 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_ASM}
+#define RETURN		(const node_data_t){.type = TP_KWORD, .val.kword = KW_RETURN}
 
 
 #define FUNC_DECL(f_name)	(const node_data_t){.type = TP_DECL_FUNC, .val.name = f_name}

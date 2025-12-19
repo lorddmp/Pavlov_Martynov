@@ -131,12 +131,14 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetDeclFunc(node_data_t *data[]);
 static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl);
 
+static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl);
+
 static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_data_t while_or_if);
 static node_t *GetAsm(node_data_t *data[]);
 
 static node_t *GetAssign(node_data_t *data[], nametbl_t *nametbl);
 
-static node_t *GetLogExpr(node_data_t *data[], nametbl_t *nametbl);
+//static node_t *GetLogExpr(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetOrExpr(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetAndExpr(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetCompExpr(node_data_t *data[], nametbl_t *nametbl);
@@ -276,7 +278,7 @@ static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
 		(*data) += 2;
 		
 		
-		while((arg_node = GetVar(data, nametbl)) || (arg_node = GetNum(data)) || (arg_node = GetCallFunc(data, nametbl)))
+		while(arg_node = GetOrExpr(data, nametbl))
 		{
 			AddChild(node->child->node, arg_node);
 			if(IS_(COMMA, *data))
@@ -320,6 +322,11 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
 	{
 		(*data)++;
 		//AddChild(node, new_node);
+		node = new_node;
+	}
+	else if((new_node = GetReturn(data, nametbl)) && IS_(SEMICOLON, *data))
+	{
+		(*data)++;
 		node = new_node;
 	}
 	else if((new_node = GetWhileIf(data, nametbl, IF)) || (new_node = GetWhileIf(data, nametbl, WHILE)))
@@ -378,6 +385,31 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
 	// 	//TreeDestroy(node);
 	// 	return NULL;
 	// }
+
+	return node;
+}
+
+static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl)
+{
+	assert(data);
+	assert(*data);
+	assert(nametbl);
+
+	node_t *node = NULL, *arg_node = NULL;
+
+	if(IS_(RETURN, *data))
+	{
+		(*data)++;
+		arg_node = GetOrExpr(data, nametbl);
+		if(arg_node == NULL)
+		{
+			print_err_msg("missing expression");
+			return NULL;
+		}
+
+		node = NewNode(RETURN);
+		AddChild(node, arg_node);
+	}
 
 	return node;
 }
@@ -679,6 +711,7 @@ static node_t *GetPrim(node_data_t *data[], nametbl_t *nametbl)
 		else
 			print_err_msg("missing expression");
 	}
+	else if(node = GetCallFunc(data, nametbl));
 	else if(node = GetNum(data));
 	else
 		node = GetVar(data, nametbl);

@@ -68,12 +68,14 @@ typedef enum kword_t
 	KW_CONTINUE,
 	KW_BREAK,
 	
+	KW_RETURN,
+	
 	KW_ASM,
 	KW_FUNC,
 
 } kword_t;
 static const char *KWORD_NAME[] =
-	{"if", "else", "while", "for", "continue", "break", "asm", "func"};
+	{"if", "else", "while", "for", "continue", "break", "return", "asm", "func"};
 
 typedef enum symb_t
 {
@@ -163,7 +165,8 @@ static const lex_t LEXS[] =
 		{"while", WHILE},
 		{"for", FOR},
 		{"asm", ASM},
-		{"func", FUNC}
+		{"func", FUNC},
+		{"return", RETURN}
 };
 
 //#include "ShortNamesUndef.h"
