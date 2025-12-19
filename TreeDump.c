@@ -27,14 +27,18 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 		data_s = SYMB_NAME[(int)data.val.symb];
 		break;
 	case TP_VAR:
-		data_s = data.val.name;
-		data_num = (long)data.val.var;
+		data_s = NULL;
+		data_num = (long)data.val.id;
 		break;
-	case TP_FUNC:
+	case TP_CALL_FUNC:
+	case TP_DECL_FUNC:
 	case TP_LITERAL:
+	case TP_IDENT:
 		data_s = data.val.name;
+		break;
 	case TP_ROOT:
 	case TP_OP_SEQ:
+	case TP_PARAM:
 		break;
 	default:
 		data_s = "??";

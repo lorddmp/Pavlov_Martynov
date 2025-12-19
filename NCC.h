@@ -20,17 +20,22 @@ typedef enum node_type_t
 	TP_OP,
 	TP_OP_SEQ,
 	
+	TP_IDENT,
+	TP_PARAM,
 	//TP_EXPR,
 	
 	TP_VAR,
 	TP_KWORD,
 	TP_SYMB,
-	TP_FUNC,
+	
+	TP_DECL_FUNC,
+	TP_CALL_FUNC,
+	
 	TP_LITERAL,
 
 } node_type_t;
 static const char *NODE_TYPE_NAME[] =
-	{"eof", "root", "number", "operation", "op. sequence", /*"expression",*/ "variable", "keyword", "symbol", "function", "literal"};
+	{"eof", "root", "number", "operation", "op. sequence", "identifier", "parameters", "variable", "keyword", "symbol", "decl function", "call function", "literal"};
 
 
 typedef enum op_t
@@ -64,10 +69,11 @@ typedef enum kword_t
 	KW_BREAK,
 	
 	KW_ASM,
+	KW_FUNC,
 
 } kword_t;
 static const char *KWORD_NAME[] =
-	{"if", "else", "while", "for", "continue", "break", "asm"};
+	{"if", "else", "while", "for", "continue", "break", "asm", "func"};
 
 typedef enum symb_t
 {
@@ -86,7 +92,7 @@ static const char *SYMB_NAME[] =
 typedef union node_val_t
 {
 	char *name;
-	size_t var;
+	size_t id;
 	long num;
 	op_t op;
 	symb_t symb;
@@ -156,7 +162,8 @@ static const lex_t LEXS[] =
 		{"else", ELSE},
 		{"while", WHILE},
 		{"for", FOR},
-		{"asm", ASM}
+		{"asm", ASM},
+		{"func", FUNC}
 };
 
 //#include "ShortNamesUndef.h"
@@ -169,6 +176,19 @@ typedef enum tree_err_t
 	TR_OVERFLOW,
 
 } tree_err_t;
+
+typedef struct cell_t
+{
+	const char *name;
+	size_t id;
+} cell_t;
+
+typedef struct nametbl_t
+{
+	cell_t *cell;
+	size_t size;
+	size_t cap;
+} nametbl_t;
 
 #include "DSLundef.h"
 

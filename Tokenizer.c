@@ -102,7 +102,7 @@ static int Ident(toks_t *toks, const char **s)
 		return 0;
 
 	int var_len = 0;
-	node_data_t data = {.type = TP_VAR};
+	node_data_t data = {.type = TP_IDENT};
 	if (sscanf(*s, "%m[A-Za-z0-9_]%n", &(data.val.name), &var_len) > 0)
 	{
 		(*s) += var_len;
@@ -111,6 +111,7 @@ static int Ident(toks_t *toks, const char **s)
 		return 1;
 	}
 
+	free(data.val.name);
 	return 0;
 }
 
@@ -184,7 +185,7 @@ void ToksDestroy(toks_t *toks)
 
 	for (size_t i = 0; i < toks->size; i++)
 	{
-		if(toks->data[i].type == TP_VAR || toks->data[i].type == TP_FUNC || toks->data[i].type == TP_LITERAL)
+		if(toks->data[i].type == TP_IDENT || toks->data[i].type == TP_LITERAL)
 		{
 			free(toks->data[i].val.name);
 			toks->data[i].val.name = NULL;
@@ -210,9 +211,8 @@ void PrintToks(node_data_t data[], FILE *dump_file)
 		fprintf(dump_file, "[%lu]\t", i);
 		switch (data[i].type)
 		{
-		case TP_FUNC:
-		case TP_VAR:
-			fprintf(dump_file, "var or f {%s}", data[i].val.name);
+		case TP_IDENT:
+			fprintf(dump_file, "ident {%s}", data[i].val.name);
 			break;
 		case TP_KWORD:
 			fprintf(dump_file, "kword %s", KWORD_NAME[(int)data[i].val.kword]);
@@ -233,6 +233,11 @@ void PrintToks(node_data_t data[], FILE *dump_file)
 			fprintf(dump_file, "EOF\n");
 			return;
 		case TP_OP_SEQ:
+		case TP_PARAM:
+		case TP_ROOT:
+		case TP_DECL_FUNC:
+		case TP_CALL_FUNC:
+		case TP_VAR:
 		default:
 			print_err_msg("datatype is out of range 'node_type_t'");
 			break;

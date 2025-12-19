@@ -4,6 +4,7 @@
 
 #define ROOT		(const node_data_t){.type = TP_ROOT, .val.num = 0}
 #define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
+#define PARAM		(const node_data_t){.type = TP_PARAM, .val.num = 0}
 //#define OP_SEQ		(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
 //#define EXPR		(const node_data_t){.type = TP_EXPR, .val.num = 0}
 
@@ -23,6 +24,7 @@
 #define DIV 		(const node_data_t){.type = TP_OP, .val.op = OP_DIV}
 #define OR 			(const node_data_t){.type = TP_OP, .val.op = OP_OR}
 #define AND 		(const node_data_t){.type = TP_OP, .val.op = OP_AND}
+#define FUNC		(const node_data_t){.type = TP_KWORD, .val.kword = KW_FUNC}
 #define IF 			(const node_data_t){.type = TP_KWORD, .val.kword = KW_IF}
 #define ELSE 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_ELSE}
 #define WHILE 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_WHILE}
@@ -30,6 +32,9 @@
 #define ASM 		(const node_data_t){.type = TP_KWORD, .val.kword = KW_ASM}
 
 
+#define FUNC_DECL(f_name)	(const node_data_t){.type = TP_DECL_FUNC, .val.name = f_name}
+#define FUNC_CALL(f_name)	(const node_data_t){.type = TP_CALL_FUNC, .val.name = f_name}
+#define VAR(var_id)			(const node_data_t){.type = TP_VAR, .val.id = var_id}
 
-#define IS_(short_name, ptr_to_arr) (!memcmp(&(short_name), *(ptr_to_arr), sizeof(node_data_t)))
+#define IS_(short_name, arr) (!memcmp(&(short_name), (arr), sizeof(node_data_t)))
 
