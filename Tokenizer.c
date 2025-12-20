@@ -1,5 +1,14 @@
 #include "NCC.h"
 
+/*-------------------------------------------*/
+static void TokRealloc(toks_t *toks);
+static int SkipComments(const char **s);
+static int Lexem(toks_t *toks, const char **s);
+static int Number(toks_t *toks, const char **s);
+static int Ident(toks_t *toks, const char **s);
+static int Literal(toks_t *toks, const char **s);
+/*-------------------------------------------*/
+
 static void TokRealloc(toks_t *toks)
 {
 	assert(toks);
@@ -41,8 +50,6 @@ static int SkipComments(const char **s)
 		else
 			return 0;
 	}
-	// else
-	// 	return 0;
 
 	if(*s == old_s)
 		return 0;
@@ -198,50 +205,3 @@ void ToksDestroy(toks_t *toks)
 	free(toks); /* dubiously, but ok */
 }
 
-void PrintToks(node_data_t data[], FILE *dump_file)
-{
-	if(data == NULL || dump_file == NULL)
-	{
-		print_err_msg("nullptr passed as argument(s)");
-		return;
-	}
-	
-	for (size_t i = 0; ; i++)
-	{
-		fprintf(dump_file, "[%lu]\t", i);
-		switch (data[i].type)
-		{
-		case TP_IDENT:
-			fprintf(dump_file, "ident {%s}", data[i].val.name);
-			break;
-		case TP_KWORD:
-			fprintf(dump_file, "kword %s", KWORD_NAME[(int)data[i].val.kword]);
-			break;
-		case TP_NUM:
-			fprintf(dump_file, "num %ld", data[i].val.num);
-			break;
-		case TP_OP:
-			fprintf(dump_file, "op %s", OP_NAME[(int)data[i].val.op]);
-			break;
-		case TP_SYMB:
-			fprintf(dump_file, "symb %s", SYMB_NAME[(int)data[i].val.symb]);
-			break;
-		case TP_LITERAL:
-			fprintf(dump_file, "lit {%s}", data[i].val.name);
-			break;
-		case TP_EOF:
-			fprintf(dump_file, "EOF\n");
-			return;
-		case TP_OP_SEQ:
-		case TP_PARAM:
-		case TP_ROOT:
-		case TP_DECL_FUNC:
-		case TP_CALL_FUNC:
-		case TP_VAR:
-		default:
-			print_err_msg("datatype is out of range 'node_type_t'");
-			break;
-		}
-		fputc('\n', dump_file);
-	}
-}

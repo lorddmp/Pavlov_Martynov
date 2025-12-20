@@ -10,8 +10,6 @@
 #include <ctype.h>
 #include "Colors.h"
 
-
-
 typedef enum node_type_t
 {
 	TP_EOF,
@@ -29,9 +27,6 @@ typedef enum node_type_t
 	TP_LITERAL,
 
 } node_type_t;
-static const char *NODE_TYPE_NAME[] =
-	{"eof", "root", "number", "operation", "op. sequence", "identifier", "parameters", "variable", "keyword", "symbol", "decl function", "call function", "literal"};
-
 
 typedef enum op_t
 {
@@ -47,8 +42,6 @@ typedef enum op_t
 	OP_AND,
 
 } op_t;
-static const char *OP_NAME[] =
-	{"+", "-", "*", "/", "\\>", "\\<", "=", "==", "or", "and"};
 
 typedef enum kword_t
 {
@@ -68,8 +61,6 @@ typedef enum kword_t
 	KW_FUNC,
 
 } kword_t;
-static const char *KWORD_NAME[] =
-	{"if", "else", "while", "for", "continue", "break", "return", "asm", "func"};
 
 typedef enum symb_t
 {
@@ -82,8 +73,6 @@ typedef enum symb_t
 	SYM_QUOTE
 
 } symb_t;
-static const char *SYMB_NAME[] =
-	{"{", "}", "(", ")", ";", ",", "\""};
 
 typedef union node_val_t
 {
@@ -163,7 +152,7 @@ static const lex_t LEXS[] =
 		{"return", RETURN}
 };
 
-//#include "ShortNamesUndef.h"
+#include "ShortNamesUndef.h"
 
 typedef enum tree_err_t
 {
@@ -187,31 +176,30 @@ typedef struct nametbl_t
 	size_t cap;
 } nametbl_t;
 
-#include "DSLundef.h"
-
 static const size_t N_LEXS = sizeof(LEXS) / sizeof(lex_t);
-static const size_t MAX_REC_DEPTH = 100;
+static const size_t MAX_REC_DEPTH = 1000;
 
 /*--------------------------------------*/
 
-long ReadFileToBuf(const char *file_path, char **buf);
-//
-//node_t *NewNode(const node_data_t data, node_t *left, node_t *right);
-//node_t *TreeCopy(const node_t *tree);
-//node_t *FindNode(node_t *tree, const node_data_t data);
+/* input */
+size_t ReadFileToBuf(const char *file_path, char **buf);
 
-toks_t *Tokenize(const char *s);
-
-void ToksDestroy(toks_t *toks);
-
-//tree_err_t TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
-
+/* dump */
 void PrintToks(node_data_t data[], FILE *dump_file);
-node_t *NewNode(const node_data_t data);
-void AddChild(node_t *node, node_t *new_child);
 void TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
 
-node_t *Parse(toks_t *toks);
-//node_t *BIN(const node_data_t data, node_t *l_val, node_t *r_val);
+/* tree functions */
+void AddChild(node_t *node, node_t *new_child);
 void TreeDestroy(node_t *tree);
+node_t *NewNode(const node_data_t data);
+
+/* front-end */
+toks_t *Tokenize(const char *s);
+node_t *Parse(toks_t *toks);
+void ToksDestroy(toks_t *toks);
+
+/* back-end */
 int CompileTree(const node_t *tree, FILE *asm_out);
+
+/* start */
+int Compile(const char *in_filename, const char *out_filename, const char *out_asm_filename, const int need_asm);

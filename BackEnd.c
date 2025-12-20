@@ -1,23 +1,26 @@
 #include "NCC.h"
 
-static int COMPILE_STATUS = 0;
-static size_t LBL_CNT = 0;
-static FILE *ASM_OUT = NULL;
+/* used in macros 'LEAVE_IF_ERR' and 'err_exit_msg' */
+static int COMPILE_STATUS = 0;	/* 0 - normal, 1 - error */
+
+static size_t LBL_CNT = 0;		/* global label counter */
+
+static FILE *ASM_OUT = NULL;	/* global pointer to asm file */
 
 /*
 
 
-    RAX (Accumulator): для арифметических операций
+    RAX (Accumulator): для арифметических операций - used
 
     RCX (Counter): для хранения счетчика цикла
 
-    RDX (Data): для арифметических операций и операций ввода-вывода
+    RDX (Data): для арифметических операций и операций ввода-вывода - used
 
     RBX (Base): указатель на данные
 
-    RSP (Stack pointer): указатель на верхушку стека
+    RSP (Stack pointer): указатель на верхушку стека - used
 
-    RBP (Base pointer): указатель на базу стека внутри функции
+    RBP (Base pointer): указатель на базу стека внутри функции - used
 
     RSI (Source index): указатель на источник при операциях с массивом
 
@@ -48,7 +51,8 @@ static void GnrtReturn(const node_t *tree, const size_t n_var);
 
 static size_t GetMaxID(const node_t *tree);
 /*---------------------------------------------*/
-
+#include "ShortNamesDef.h"
+/*---------------------------------------------*/
 int CompileTree(const node_t *tree, FILE *asm_out)
 {
 	if(tree == NULL || asm_out == NULL)
@@ -117,7 +121,7 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		case KW_BREAK:
 		case KW_FUNC:
 		default:
-			err_exit_void("invalid keyword");
+			err_exit_msg("invalid keyword");
 		}
 		return;
 	case TP_OP:
@@ -136,7 +140,7 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		case OP_OR:
 		case OP_AND:
 		default:
-			err_exit_void("invalid operation");
+			err_exit_msg("invalid operation");
 		}
 		return;
 	case TP_EOF:
@@ -150,7 +154,7 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 	case TP_DECL_FUNC:
 	case TP_LITERAL:
 	default:
-		err_exit_void("invalid type");
+		err_exit_msg("invalid type");
 		return;
 	}
 }
@@ -161,13 +165,13 @@ static void GnrtOpSeq(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	LEAVE_IF_ERR;
 	if(tree->data.type != TP_OP_SEQ)
-		err_exit_void("node is not an op. sequence");
+		err_exit_msg("node is not an op. sequence");
 
 	child_t *op = tree->child;
 	while(op)
 	{
 		if(op->node == NULL)
-			err_exit_void("child->node == NULL");
+			err_exit_msg("child->node == NULL");
 		GnrtOp(op->node, n_var);
 		op = op->next;
 	}
@@ -192,7 +196,7 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 		return;
 	case TP_OP:
 		if(!IS_BINNODE(tree))
-			err_exit_void("invalid node");
+			err_exit_msg("invalid node");
 
 		GnrtExpr(LEFT(tree), n_var);
 		GnrtExpr(RIGHT(tree), n_var);
@@ -218,7 +222,7 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 		case OP_OR:
 		case OP_AND:
 		default:
-			err_exit_void("invalid operation");
+			err_exit_msg("invalid operation");
 		}
 		return;
 	case TP_EOF:
@@ -232,7 +236,7 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 	case TP_CALL_FUNC:
 	case TP_LITERAL:
 	default:
-		err_exit_void("invalid type");
+		err_exit_msg("invalid type");
 	}
 }
 
@@ -242,9 +246,9 @@ static void GnrtDeclFunc(const node_t *tree)
 	assert(tree);
 	assert(ASM_OUT);
 	if(tree->data.type != TP_DECL_FUNC)
-		err_exit_void("node is not a function declaration");
+		err_exit_msg("node is not a function declaration");
 	if(!IS_BINNODE(tree))
-		err_exit_void("invalid node");
+		err_exit_msg("invalid node");
 
 	print_asm("%s:\n", tree->data.val.name);
 
@@ -259,9 +263,9 @@ static void GnrtAsm(const node_t *tree)
 	assert(ASM_OUT);
 	LEAVE_IF_ERR;
 	if(!IS_(ASM, &(tree->data)))
-		err_exit_void("is not 'asm'");
+		err_exit_msg("is not 'asm'");
 	if(!(tree->child && tree->child->node))
-		err_exit_void("invalid node");
+		err_exit_msg("invalid node");
 
 	print_asm(";asm insertion\n"
 		  "%s\n\n",
@@ -274,9 +278,9 @@ static void GnrtOr(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(!IS_(OR, &(tree->data)))
-		err_exit_void("is not 'or'");
+		err_exit_msg("is not 'or'");
 	if(!IS_BINNODE(tree))
-		err_exit_void("not binary 'or'");
+		err_exit_msg("not binary 'or'");
 
 	GnrtExpr(RIGHT(tree), n_var);
 	GnrtExpr(LEFT(tree), n_var);
@@ -308,9 +312,9 @@ static void GnrtAnd(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(!IS_(AND, &(tree->data)))
-		err_exit_void("is not 'and'");
+		err_exit_msg("is not 'and'");
 	if(!IS_BINNODE(tree))
-		err_exit_void("not binary 'and'");
+		err_exit_msg("not binary 'and'");
 
 	GnrtExpr(RIGHT(tree), n_var);
 	GnrtExpr(LEFT(tree), n_var);
@@ -343,7 +347,7 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 	assert(ASM_OUT);
 	
 	if(!IS_BINNODE(tree))
-		err_exit_void("node is not binary");
+		err_exit_msg("node is not binary");
 	
 	GnrtExpr(RIGHT(tree), n_var);
 	GnrtExpr(LEFT(tree), n_var);
@@ -368,10 +372,10 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 	case OP_OR:
 	case OP_AND:
 	default:
-		err_exit_void("jmptype out of range");
+		err_exit_msg("jmptype out of range");
 	}
 
-	print_asm(";compare (..%s..)\n"
+	print_asm(";compare\n"
 			  "pop rax ;lvalue\n"
 			  "pop rdx ;rvalue\n"
 			  "cmp rdx, rax\n"
@@ -381,7 +385,6 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 			  ".L%lu:\n"
 			  "push 1\n"
 			  ".L%lu:\n\n",
-			  OP_NAME[(int)gle],
 			  jmp_type, LBL_CNT,
 			  LBL_CNT + 1,
 			  LBL_CNT,
@@ -430,7 +433,7 @@ static void GnrtExpr(const node_t *tree, const size_t n_var)
 			break;
 		case OP_ASSIGN:
 		default:
-			err_exit_void("invalid operation");
+			err_exit_msg("invalid operation");
 		}
 		break;
 	case TP_EOF:
@@ -443,7 +446,7 @@ static void GnrtExpr(const node_t *tree, const size_t n_var)
 	case TP_DECL_FUNC:
 	case TP_LITERAL:
 	default:
-		err_exit_void("type out of range");
+		err_exit_msg("type out of range");
 	}
 }
 
@@ -453,9 +456,9 @@ static void GnrtIf(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(!IS_(IF, &(tree->data)))
-		err_exit_void("is not 'if'");
+		err_exit_msg("is not 'if'");
 	if(!IS_BINNODE(tree))
-		err_exit_void("is not binary");
+		err_exit_msg("is not binary");
 
 	GnrtExpr(LEFT(tree), n_var), n_var;
 	size_t if_lbl = LBL_CNT++;
@@ -479,9 +482,9 @@ static void GnrtWhile(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(!IS_(WHILE, &(tree->data)))
-		err_exit_void("is not 'while'");
+		err_exit_msg("is not 'while'");
 	if(!IS_BINNODE(tree))
-		err_exit_void("is not binary");
+		err_exit_msg("is not binary");
 
 	size_t cond_lbl = LBL_CNT++, end_lbl = LBL_CNT++;
 	print_asm(";while condition\n"
@@ -511,11 +514,11 @@ static void GnrtAssign(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(!IS_(ASSIGN, &(tree->data)))
-		err_exit_void("is not 'assignment'");
+		err_exit_msg("is not 'assignment'");
 	if(!IS_BINNODE(tree))
-		err_exit_void("is not binary");
+		err_exit_msg("is not binary");
 	if(LEFT(tree)->data.type != TP_VAR)
-		err_exit_void("lvalue must be variable");
+		err_exit_msg("lvalue must be variable");
 
 	GnrtExpr(RIGHT(tree), n_var);
 
@@ -531,9 +534,9 @@ static void GnrtCallFunc(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	if(tree->data.type != TP_CALL_FUNC)
-		err_exit_void("is not a function call");
+		err_exit_msg("is not a function call");
 	if(tree->child == NULL || tree->child->node == NULL)
-		err_exit_void("call node without parameters node");
+		err_exit_msg("call node without parameters node");
 
 	print_asm(";call function\n"
 			  ";-------------\n");
@@ -547,7 +550,7 @@ static void GnrtCallFunc(const node_t *tree, const size_t n_var)
 	while (param)
 	{
 		if(param->node == NULL)
-			err_exit_void("non-existing param");
+			err_exit_msg("non-existing param");
 
 		GnrtExpr(param->node, n_var);
 
@@ -609,10 +612,13 @@ static void GnrtReturn(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	if(!IS_(RETURN, &(tree->data)))
-		err_exit_void("is not a 'return'");
+		err_exit_msg("is not a 'return'");
 	
 	if(tree->child && tree->child->node)
 		GnrtExpr(tree->child->node, n_var);
 	
 	print_asm("ret\n");
 }
+/*---------------------------------------------*/
+#include "ShortNamesUndef.h"
+/*---------------------------------------------*/

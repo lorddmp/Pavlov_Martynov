@@ -1,5 +1,20 @@
 #include "NCC.h"
+/*---------------------------------------------------------*/
+static const char *NODE_TYPE_NAME[] =
+	{"eof", "root", "number", "operation", "op. sequence", "identifier", "parameters", "variable", "keyword", "symbol", "decl function", "call function", "literal"};
+static const char *OP_NAME[] =
+	{"+", "-", "*", "/", "\\>", "\\<", "=", "==", "or", "and"};
+static const char *KWORD_NAME[] =
+	{"if", "else", "while", "for", "continue", "break", "return", "asm", "func"};
+static const char *SYMB_NAME[] =
+	{"{", "}", "(", ")", ";", ",", "\""};
 
+/*---------------------------------------------------------*/
+static void PrintNodeData(const node_data_t data, FILE *out_file);
+static void PrintDigraphNode(const node_t *node, FILE *dot_file, size_t *call_count);
+static void PrintDigraphTree(const node_t *tree, FILE *dot_file);
+static void CreateDigraph(const node_t *tree, const char *dot_file_path);
+/*---------------------------------------------------------*/
 
 static void PrintNodeData(const node_data_t data, FILE *out_file)
 {
@@ -69,16 +84,6 @@ static void PrintDigraphNode(const node_t *node, FILE *dot_file, size_t *call_co
 			(size_t)node, node, NODE_TYPE_NAME[node->data.type]);
 	PrintNodeData(node->data, dot_file);
 	fprintf(dot_file, " | prnt[%p]}\"];\n", node->parent);
-
-	// if(node->left)
-	// {
-	// 	if(node->left->parent == node)
-	// 		fprintf(dot_file, "label%lu->label%lu [color=purple, dir=both]\n", (size_t)node, (size_t)node->left);
-	// 	else
-	// 		fprintf(dot_file, "label%lu->label%lu [color=red]\n", (size_t)node, (size_t)node->left);
-		
-	// 	err = PrintDigraphNode(node->left, dot_file, call_count);
-	// }
 	
 	if(node->child)
 	{
@@ -159,3 +164,52 @@ exit:
 	fclose(html_file);
     call_count++;
 }
+
+void PrintToks(node_data_t data[], FILE *dump_file)
+{
+	if(data == NULL || dump_file == NULL)
+	{
+		print_err_msg("nullptr passed as argument(s)");
+		return;
+	}
+	
+	for (size_t i = 0; ; i++)
+	{
+		fprintf(dump_file, "[%lu]\t", i);
+		switch (data[i].type)
+		{
+		case TP_IDENT:
+			fprintf(dump_file, "ident {%s}", data[i].val.name);
+			break;
+		case TP_KWORD:
+			fprintf(dump_file, "kword %s", KWORD_NAME[(int)data[i].val.kword]);
+			break;
+		case TP_NUM:
+			fprintf(dump_file, "num %ld", data[i].val.num);
+			break;
+		case TP_OP:
+			fprintf(dump_file, "op %s", OP_NAME[(int)data[i].val.op]);
+			break;
+		case TP_SYMB:
+			fprintf(dump_file, "symb %s", SYMB_NAME[(int)data[i].val.symb]);
+			break;
+		case TP_LITERAL:
+			fprintf(dump_file, "lit {%s}", data[i].val.name);
+			break;
+		case TP_EOF:
+			fprintf(dump_file, "EOF\n");
+			return;
+		case TP_OP_SEQ:
+		case TP_PARAM:
+		case TP_ROOT:
+		case TP_DECL_FUNC:
+		case TP_CALL_FUNC:
+		case TP_VAR:
+		default:
+			print_err_msg("datatype is out of range 'node_type_t'");
+			break;
+		}
+		fputc('\n', dump_file);
+	}
+}
+

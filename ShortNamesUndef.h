@@ -1,32 +1,37 @@
-#pragma once
-
-#include "NCC.h"
-
 #undef ROOT
-
-#undef OPN_BRC		
-#undef CLS_BRC 	
-#undef OPN_PAR 	
-#undef CLS_PAR 	
-#undef SEMICOLON
-#undef COMMA 
-#undef EQ 			
-#undef ASSIGN
-#undef ADD 		
-#undef SUB 		
-#undef GREATER
-#undef LESS 	
-#undef MUL 		
-#undef DIV 		
-#undef OR 			
-#undef AND 		
-#undef IF 			
-#undef ELSE 	
-#undef WHILE 
-#undef FOR 		
-#undef ASM 		
-
-#undef IS_
 #undef OP_SEQ
-//#undef EXPR
+#undef PARAM
+#undef OPN_BRC
+#undef CLS_BRC
+#undef OPN_PAR
+#undef CLS_PAR
+#undef SEMICOLON
+#undef COMMA
+#undef EQ
+#undef ASSIGN
+#undef ADD
+#undef SUB
+#undef GREATER
+#undef LESS
+#undef MUL
+#undef DIV
+#undef OR
+#undef AND
+#undef FUNC
+#undef IF
+#undef ELSE
+#undef WHILE
+#undef FOR
+#undef ASM
+#undef RETURN
+#undef FUNC_DECL
+#undef FUNC_CALL
+#undef VAR
+#undef IS_BINNODE
+#undef LEFT
+#undef RIGHT
 
+#undef LEAVE_IF_ERR
+#undef err_exit_void
+#undef print_asm
+#undef IS_
