@@ -31,7 +31,7 @@ static FILE *ASM_OUT = NULL;
 
 /*---------------------------------------------*/
 static void GnrtDeclFunc(const node_t *tree);
-static void GnrtAsm(const node_t *tree, const size_t n_var);
+static void GnrtAsm(const node_t *tree);
 static void GnrtArifm(const node_t *tree, const size_t n_var);
 
 static void GnrtExpr(const node_t *tree, const size_t n_var);
@@ -49,18 +49,40 @@ static void GnrtReturn(const node_t *tree, const size_t n_var);
 static size_t GetMaxID(const node_t *tree);
 /*---------------------------------------------*/
 
-int CompileTree(const node_t *tree, const size_t n_var)
+int CompileTree(const node_t *tree, FILE *asm_out)
 {
-	if(tree == NULL || ASM_OUT == NULL)
+	if(tree == NULL || asm_out == NULL)
 	{
 		print_err_msg("nullptr passed as arg(s)");
 		return 1;
 	}
 	if(!IS_(ROOT, &(tree->data)))
 	{
-		print_err_msg()
+		print_err_msg("I wanna be a root");
+		return 1;
 	}
-	
+
+	ASM_OUT = asm_out;
+
+	child_t *decl = tree->child;
+	while(decl)
+	{
+		if(decl->node == NULL)
+		{
+			print_err_msg("null node");
+			return 1;
+		}
+		if(COMPILE_STATUS)
+		{
+			print_err_msg("compilation failed");
+			return 1;
+		}
+
+		GnrtDeclFunc(decl->node);
+		decl = decl->next;
+	}
+
+	return COMPILE_STATUS;
 }
 
 static void GnrtOp(const node_t *tree, const size_t n_var)
@@ -68,8 +90,6 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 	assert(tree);
 	assert(ASM_OUT);
 	LEAVE_IF_ERR;
-	if(tree->data.type != TP_OP)
-		err_exit_void("node is not a operation");
 
 	switch(tree->data.type)
 	{
@@ -80,7 +100,7 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		switch(tree->data.val.kword)
 		{
 		case KW_ASM:
-			GnrtAsm(tree, n_var);
+			GnrtAsm(tree);
 			return;
 		case KW_IF:
 			GnrtIf(tree, n_var);
@@ -91,6 +111,11 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		case KW_RETURN:
 			GnrtReturn(tree, n_var);
 			return;
+		case KW_ELSE:
+		case KW_FOR:
+		case KW_CONTINUE:		/* aren't implemented */
+		case KW_BREAK:
+		case KW_FUNC:
 		default:
 			err_exit_void("invalid keyword");
 		}
@@ -105,11 +130,27 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		case OP_SUB:
 		case OP_MUL:
 		case OP_DIV:
-			GnrtArifm(tree, n_var);
-			return;
+		case OP_GREATER:		/* implemented in GnrtArifm */
+		case OP_LESS:
+		case OP_EQ:
+		case OP_OR:
+		case OP_AND:
 		default:
 			err_exit_void("invalid operation");
 		}
+		return;
+	case TP_EOF:
+	case TP_ROOT:
+	case TP_NUM:
+	case TP_OP_SEQ:
+	case TP_IDENT:
+	case TP_PARAM:				/* cannot be operation */
+	case TP_VAR:
+	case TP_SYMB:
+	case TP_DECL_FUNC:
+	case TP_LITERAL:
+	default:
+		err_exit_void("invalid type");
 		return;
 	}
 }
@@ -120,7 +161,7 @@ static void GnrtOpSeq(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	LEAVE_IF_ERR;
 	if(tree->data.type != TP_OP_SEQ)
-		err_exit_void("node is not a op. equence");
+		err_exit_void("node is not an op. sequence");
 
 	child_t *op = tree->child;
 	while(op)
@@ -150,11 +191,11 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 				  tree->data.val.id);
 		return;
 	case TP_OP:
-		if(!HAS_TWO_CHILD(tree))
+		if(!IS_BINNODE(tree))
 			err_exit_void("invalid node");
 
-		GnrtArifm(tree->child->node, n_var);
-		GnrtArifm(tree->child->next->node, n_var);
+		GnrtExpr(LEFT(tree), n_var);
+		GnrtExpr(RIGHT(tree), n_var);
 
 		switch(tree->data.val.op)
 		{
@@ -170,9 +211,28 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 		case OP_DIV:
 			print_asm("div\n");
 			return;
+		case OP_GREATER:
+		case OP_LESS:
+		case OP_ASSIGN:
+		case OP_EQ:			/* implemented in GnrtComp, GnrtAnd, GnrtOr */
+		case OP_OR:
+		case OP_AND:
 		default:
 			err_exit_void("invalid operation");
 		}
+		return;
+	case TP_EOF:
+	case TP_ROOT:
+	case TP_OP_SEQ:
+	case TP_IDENT:
+	case TP_PARAM:
+	case TP_KWORD:
+	case TP_SYMB:
+	case TP_DECL_FUNC:
+	case TP_CALL_FUNC:
+	case TP_LITERAL:
+	default:
+		err_exit_void("invalid type");
 	}
 }
 
@@ -183,16 +243,17 @@ static void GnrtDeclFunc(const node_t *tree)
 	assert(ASM_OUT);
 	if(tree->data.type != TP_DECL_FUNC)
 		err_exit_void("node is not a function declaration");
+	if(!IS_BINNODE(tree))
+		err_exit_void("invalid node");
 
-	
 	print_asm("%s:\n", tree->data.val.name);
 
-	GnrtOp(tree, GetMaxID(tree));
+	GnrtOpSeq(RIGHT(tree), GetMaxID(tree));
 	
 	print_asm("ret\n\n"); /* dubiously */
 }
 
-static void GnrtAsm(const node_t *tree, const size_t n_var)
+static void GnrtAsm(const node_t *tree)
 {
 	assert(tree);
 	assert(ASM_OUT);
@@ -212,7 +273,7 @@ static void GnrtOr(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	if(!IS_(OR, &(tree->data)))
 		err_exit_void("is not 'or'");
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("not binary 'or'");
 
 	GnrtExpr(RIGHT(tree), n_var);
@@ -246,7 +307,7 @@ static void GnrtAnd(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	if(!IS_(AND, &(tree->data)))
 		err_exit_void("is not 'and'");
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("not binary 'and'");
 
 	GnrtExpr(RIGHT(tree), n_var);
@@ -279,7 +340,7 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 	assert(tree);
 	assert(ASM_OUT);
 	
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("node is not binary");
 	
 	GnrtExpr(RIGHT(tree), n_var);
@@ -297,6 +358,13 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 	case OP_EQ:
 		jmp_type = "je";
 		break;
+	case OP_ADD:
+	case OP_SUB:
+	case OP_MUL:
+	case OP_DIV:
+	case OP_ASSIGN:
+	case OP_OR:
+	case OP_AND:
 	default:
 		err_exit_void("jmptype out of range");
 	}
@@ -311,7 +379,7 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 			  ".L%lu:\n"
 			  "push 1\n"
 			  ".L%lu:\n\n",
-			  OP_NAME[(int)jmp_type],
+			  OP_NAME[(int)gle],
 			  jmp_type, LBL_CNT,
 			  LBL_CNT + 1,
 			  LBL_CNT,
@@ -358,10 +426,20 @@ static void GnrtExpr(const node_t *tree, const size_t n_var)
 		case OP_LESS:
 			GnrtComp(tree, n_var, OP_LESS);
 			break;
+		case OP_ASSIGN:
 		default:
-			err_exit_void("operation out of range");
+			err_exit_void("invalid operation");
 		}
 		break;
+	case TP_EOF:
+	case TP_ROOT:
+	case TP_OP_SEQ:
+	case TP_IDENT:
+	case TP_PARAM:			/* cannot be expression */
+	case TP_KWORD:
+	case TP_SYMB:
+	case TP_DECL_FUNC:
+	case TP_LITERAL:
 	default:
 		err_exit_void("type out of range");
 	}
@@ -374,7 +452,7 @@ static void GnrtIf(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	if(!IS_(IF, &(tree->data)))
 		err_exit_void("is not 'if'");
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("is not binary");
 
 	GnrtExpr(LEFT(tree), n_var), n_var;
@@ -386,7 +464,7 @@ static void GnrtIf(const node_t *tree, const size_t n_var)
 			  ";if body\n",
 			  if_lbl);
 
-	GnrtOp(RIGHT(tree), n_var);
+	GnrtOpSeq(RIGHT(tree), n_var);
 
 	print_asm(";end if\n"
 		  ".L%lu:\n\n",
@@ -400,7 +478,7 @@ static void GnrtWhile(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	if(!IS_(WHILE, &(tree->data)))
 		err_exit_void("is not 'while'");
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("is not binary");
 
 	GnrtExpr(LEFT(tree), n_var);
@@ -414,7 +492,7 @@ static void GnrtWhile(const node_t *tree, const size_t n_var)
 			  ";while body\n",
 			  cond_lbl, end_lbl);
 
-	GnrtOp(RIGHT(tree), n_var);
+	GnrtOpSeq(RIGHT(tree), n_var);
 
 	print_asm("jmp .L%lu\n"
 			  ";end while\n"
@@ -429,7 +507,7 @@ static void GnrtAssign(const node_t *tree, const size_t n_var)
 	assert(ASM_OUT);
 	if(!IS_(ASSIGN, &(tree->data)))
 		err_exit_void("is not 'assignment'");
-	if(!HAS_TWO_CHILD(tree))
+	if(!IS_BINNODE(tree))
 		err_exit_void("is not binary");
 	if(LEFT(tree)->data.type != TP_VAR)
 		err_exit_void("lvalue must be variable");

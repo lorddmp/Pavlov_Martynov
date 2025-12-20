@@ -7,8 +7,8 @@ CC = gcc
 
 all: main
 
-main: main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o
-	$(CC) $(linker_flags) main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o
+main: main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o BackEnd.o
+	$(CC) $(linker_flags) main.o Input.o Tokenizer.o Tree.o Parser.o TreeDump.o BackEnd.o
 
 TreeDump.o: TreeDump.c
 
@@ -21,6 +21,8 @@ Tree.o: Tree.c
 Tokenizer.o: Tokenizer.c
 
 Parser.o: Parser.c
+
+BackEnd.o: BackEnd.c
 
 clean:
 	rm *.o

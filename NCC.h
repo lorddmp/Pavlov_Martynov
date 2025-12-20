@@ -19,18 +19,13 @@ typedef enum node_type_t
 	TP_NUM,
 	TP_OP,
 	TP_OP_SEQ,
-	
 	TP_IDENT,
 	TP_PARAM,
-	//TP_EXPR,
-	
 	TP_VAR,
 	TP_KWORD,
 	TP_SYMB,
-	
 	TP_DECL_FUNC,
 	TP_CALL_FUNC,
-	
 	TP_LITERAL,
 
 } node_type_t;
@@ -48,7 +43,6 @@ typedef enum op_t
 	OP_LESS,
 	OP_ASSIGN,
 	OP_EQ,
-	
 	OP_OR,
 	OP_AND,
 
@@ -220,4 +214,4 @@ void TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img
 node_t *Parse(toks_t *toks);
 //node_t *BIN(const node_data_t data, node_t *l_val, node_t *r_val);
 void TreeDestroy(node_t *tree);
-
+int CompileTree(const node_t *tree, FILE *asm_out);

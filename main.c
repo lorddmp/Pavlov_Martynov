@@ -17,6 +17,12 @@ int main(void)
 	assert(tree);
 	TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "test");
 
+	FILE *asm_out = fopen("f.asm", "w");
+	assert(asm_out);
+
+	CompileTree(tree, asm_out);
+
+	fclose(asm_out);
 	TreeDestroy(tree);
 	ToksDestroy(toks);
 	free(s);
