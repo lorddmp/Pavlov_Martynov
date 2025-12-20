@@ -85,9 +85,9 @@ static size_t TblAddName(const char *name, nametbl_t *nametbl)
 	if(nametbl->size)
 		nametbl->cell[nametbl->size].id = nametbl->cell[nametbl->size - 1].id + 1;
 	else
-		nametbl->cell[0].id = 0;
+		nametbl->cell[0].id = 0; /* initial id */
 
-	return nametbl->size++;
+	return nametbl->cell[nametbl->size++].id;
 }
 
 static size_t TblGetID(const char *name, nametbl_t *nametbl)
@@ -225,16 +225,14 @@ static node_t *GetDeclFunc(node_data_t *data[])
 					break;
 			}
 			
-			if (IS_(CLS_PAR, *data))
-			{
-				(*data)++;
-				//break;
-			}
-			else
+			if (!IS_(CLS_PAR, *data))
 			{
 				print_err_msg("missing ',' or ')'");
 				goto err_exit;
 			}
+
+			(*data)++;
+			node->child->node->data.val.id = nametbl->size;
 
 			arg_node = GetOp(data, nametbl);
 			if(arg_node == NULL || arg_node->data.type != TP_OP_SEQ)
@@ -276,10 +274,11 @@ static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
 		node = NewNode(FUNC_CALL((**data).val.name));
 		AddChild(node, NewNode(PARAM));
 		(*data) += 2;
-		
-		
-		while(arg_node = GetOrExpr(data, nametbl))
+
+		size_t param_count = 0;
+		while (arg_node = GetOrExpr(data, nametbl))
 		{
+			param_count++;
 			AddChild(node->child->node, arg_node);
 			if(IS_(COMMA, *data))
 				(*data)++;
@@ -295,6 +294,8 @@ static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
 			//TreeDestroy(arg_node);
 			return NULL;
 		}
+
+		node->child->node->data.val.id = param_count;
 	}
 	else
 		return NULL;
@@ -399,16 +400,21 @@ static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl)
 
 	if(IS_(RETURN, *data))
 	{
-		(*data)++;
-		arg_node = GetOrExpr(data, nametbl);
-		if(arg_node == NULL)
-		{
-			print_err_msg("missing expression");
-			return NULL;
-		}
-
 		node = NewNode(RETURN);
-		AddChild(node, arg_node);
+		(*data)++;
+		
+		if(!IS_(SEMICOLON, *data))
+		{
+			arg_node = GetOrExpr(data, nametbl);
+				
+			if(arg_node == NULL)
+			{
+				print_err_msg("missing expression");
+				return NULL;
+			}
+	
+			AddChild(node, arg_node);
+		}
 	}
 
 	return node;

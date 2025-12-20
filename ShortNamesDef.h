@@ -36,6 +36,22 @@
 #define FUNC_DECL(f_name)	(const node_data_t){.type = TP_DECL_FUNC, .val.name = f_name}
 #define FUNC_CALL(f_name)	(const node_data_t){.type = TP_CALL_FUNC, .val.name = f_name}
 #define VAR(var_id)			(const node_data_t){.type = TP_VAR, .val.id = var_id}
+#define HAS_TWO_CHILD(tree)	(tree->child && tree->child->node && tree->child->next && tree->child->next->node && tree->child->next->next == NULL)
+#define LEFT(tree)			tree->child->node
+#define RIGHT(tree)			tree->child->next->node
+
+#define LEAVE_IF_ERR    \
+	if (COMPILE_STATUS) \
+		return;
+
+#define err_exit_void(msg)  \
+	{                       \
+		print_err_msg(msg); \
+		COMPILE_STATUS = 1; \
+		return;             \
+	}
+
+#define print_asm(fmt, ...)	fprintf(ASM_OUT, fmt, ##__VA_ARGS__)
 
 #define IS_(short_name, arr) (!memcmp(&(short_name), (arr), sizeof(node_data_t)))
 

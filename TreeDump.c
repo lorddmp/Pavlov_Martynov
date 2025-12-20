@@ -27,6 +27,7 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 		data_s = SYMB_NAME[(int)data.val.symb];
 		break;
 	case TP_VAR:
+	case TP_PARAM:
 		data_s = NULL;
 		data_num = (long)data.val.id;
 		break;
@@ -38,7 +39,6 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 		break;
 	case TP_ROOT:
 	case TP_OP_SEQ:
-	case TP_PARAM:
 		break;
 	default:
 		data_s = "??";
