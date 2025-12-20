@@ -260,10 +260,12 @@ static void GnrtAsm(const node_t *tree)
 	LEAVE_IF_ERR;
 	if(!IS_(ASM, &(tree->data)))
 		err_exit_void("is not 'asm'");
+	if(!(tree->child && tree->child->node))
+		err_exit_void("invalid node");
 
 	print_asm(";asm insertion\n"
 		  "%s\n\n",
-		  tree->data.val.name);
+		  tree->child->node->data.val.name);
 }
 
 static void GnrtOr(const node_t *tree, const size_t n_var)
@@ -280,23 +282,23 @@ static void GnrtOr(const node_t *tree, const size_t n_var)
 	GnrtExpr(LEFT(tree), n_var);
 
 	print_asm(";or\n"
-		  "pop rax ;lvalue\n"
-		  "cmp rax, 0\n"
-		  "jne .L%lu\n"
-		  "pop rax ;rvalue\n"
-		  "cmp rax, 0\n"
-		  "jne .L%lu\n"
-		  ";result:\n"
-		  "push 0\n"
-		  "jmp .L%lu\n"
-		  ".L%lu:\n"
-		  "push 1\n"
-		  ".L%lu:\n\n",
-		  LBL_CNT,
-		  LBL_CNT,
-		  LBL_CNT + 1,
-		  LBL_CNT,
-		  LBL_CNT + 1);
+			  "pop rax ;lvalue\n"
+			  "cmp rax, 0\n"
+			  "jne .L%lu\n"
+			  "pop rax ;rvalue\n"
+			  "cmp rax, 0\n"
+			  "jne .L%lu\n"
+			  ";result:\n"
+			  "push 0\n"
+			  "jmp .L%lu\n"
+			  ".L%lu:\n"
+			  "push 1\n"
+			  ".L%lu:\n\n",
+			  LBL_CNT,
+			  LBL_CNT,
+			  LBL_CNT + 1,
+			  LBL_CNT,
+			  LBL_CNT + 1);
 	LBL_CNT += 2;
 }
 
@@ -372,7 +374,7 @@ static void GnrtComp(const node_t *tree, const size_t n_var, const op_t gle)
 	print_asm(";compare (..%s..)\n"
 			  "pop rax ;lvalue\n"
 			  "pop rdx ;rvalue\n"
-			  "cmp rax, rdx\n"
+			  "cmp rdx, rax\n"
 			  "%s .L%lu\n"
 			  "push 0\n"
 			  "jmp .L%lu\n"
@@ -467,8 +469,8 @@ static void GnrtIf(const node_t *tree, const size_t n_var)
 	GnrtOpSeq(RIGHT(tree), n_var);
 
 	print_asm(";end if\n"
-		  ".L%lu:\n\n",
-		  if_lbl);
+			  ".L%lu:\n\n",
+			  if_lbl);
 }
 
 static void GnrtWhile(const node_t *tree, const size_t n_var)
@@ -481,16 +483,19 @@ static void GnrtWhile(const node_t *tree, const size_t n_var)
 	if(!IS_BINNODE(tree))
 		err_exit_void("is not binary");
 
-	GnrtExpr(LEFT(tree), n_var);
-
 	size_t cond_lbl = LBL_CNT++, end_lbl = LBL_CNT++;
 	print_asm(";while condition\n"
-			  ".L%lu:\n"
+			  ".L%lu:\n",
+			  cond_lbl);
+
+	GnrtExpr(LEFT(tree), n_var);
+
+	print_asm(";check condition\n"
 			  "pop rax\n"
 			  "cmp rax, 0\n"
 			  "je .L%lu\n"
 			  ";while body\n",
-			  cond_lbl, end_lbl);
+			  end_lbl);
 
 	GnrtOpSeq(RIGHT(tree), n_var);
 
@@ -514,9 +519,9 @@ static void GnrtAssign(const node_t *tree, const size_t n_var)
 
 	GnrtExpr(RIGHT(tree), n_var);
 
-	print_asm("mov rpb, rsp\n"
+	print_asm("mov rbp, rsp\n"
 			  "add rbp, %lu ;calculate var pos in stack\n"
-			  "pop [rpb] ;assign var a value\n\n",
+			  "pop [rbp] ;assign var a value\n\n",
 			  LEFT(tree)->data.val.id);
 }
 
@@ -531,26 +536,41 @@ static void GnrtCallFunc(const node_t *tree, const size_t n_var)
 		err_exit_void("call node without parameters node");
 
 	print_asm(";call function\n"
-			  "mov rbp, rsp\n"
-			  "add rbp, %lu ;shift sp\n",
-			  n_var);
+			  ";-------------\n");
+	// print_asm(";call function\n"
+	// 		  "mov rdi, rsp\n"
+	// 		  "add rdi, %lu ;di points to new memory segment\n",
+	// 		  n_var);
 
 	child_t *param = tree->child->node->child;
-	while(param)
+	/* push to arifmetic stack */
+	while (param)
 	{
 		if(param->node == NULL)
 			err_exit_void("non-existing param");
 
-		print_asm("mov [rbp], %ld ;load parameter\n"
-				  "add rbp, 1\n",
-				  param->node->data.val.num);
+		GnrtExpr(param->node, n_var);
 
 		param = param->next;
 	}
+	
+	/* load parameters to ram stack */
+	print_asm("mov rbp, rsp\n"
+			  "add rbp, %lu ;last param pos\n",
+			  n_var + tree->child->node->data.val.id - 1);
 
-	print_asm("call %s\n"
-			  "sub rbp, %lu ;shift back\n\n",
-			  tree->data.val.name, n_var);
+							/* num of parameters */
+	for (size_t i = 0; i < tree->child->node->data.val.id; i++) 
+	{
+		print_asm("pop [rbp] ;load param\n"
+				  "sub rbp, 1\n");
+	}
+
+	print_asm("add rsp, %lu ;shift sp\n"
+			  "call %s\n"
+			  "sub rsp, %lu ;shift back\n"
+			  ";-------------\n\n",
+			  n_var, tree->data.val.name, n_var);
 }
 
 /* counts number of variables in tree */
@@ -581,7 +601,7 @@ static size_t GetMaxID(const node_t *tree)
 	size_t max_id = 0;
 	MaxID(tree, &max_id);
 
-	return max_id;
+	return max_id + 1;
 }
 
 static void GnrtReturn(const node_t *tree, const size_t n_var)

@@ -161,8 +161,8 @@ toks_t *Tokenize(const char *s)
 		TokRealloc(toks);
 
 		if (SkipComments(&s));
-		else if(Lexem(toks, &s));
 		else if(Number(toks, &s));
+		else if(Lexem(toks, &s));
 		else if(Ident(toks, &s));
 		else if(Literal(toks, &s));
 		else
