@@ -1,5 +1,7 @@
 #include "NCC.h"
 
+#include <unistd.h>
+
 static inline void PrintUsage(void)
 {
 	fprintf(stderr, colorize("Usage:\t", _BOLD_ _YELLOW_)
@@ -60,6 +62,12 @@ exit:
 	free(out_asm_filename);
 	free(out_filename);
 	free(in_filename);
+
+	if(compile_status)
+	{
+		sleep(1);
+		system("tiv ./Img/funnyded.jpg"); /* easter egg =) */
+	}
 
 	return compile_status;
 }

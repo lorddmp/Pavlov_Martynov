@@ -92,6 +92,14 @@ typedef struct node_data_t
 	
 } node_data_t;
 
+/*
+	some ideas: 
+	make table that matchs tokens to their location in line
+	in case 'compilation error' we have to print code since location.
+	
+	
+*/
+
 typedef struct node_t
 {
 	node_data_t data;
@@ -185,7 +193,7 @@ static const size_t MAX_REC_DEPTH = 1000;
 size_t ReadFileToBuf(const char *file_path, char **buf);
 
 /* dump */
-void PrintToks(node_data_t data[], FILE *dump_file);
+void PrintToks(node_data_t data[], FILE *dump_file, size_t limit);
 void TreeDumpHTML(const node_t *tree, const char *dot_file_path, const char *img_dir_path, const char *html_file_path, const char *caption);
 
 /* tree functions */

@@ -30,16 +30,25 @@ int Compile(const char *in_filename, const char *out_filename, const char *out_a
 
 	toks = Tokenize(code);
 	if(toks == NULL || toks->data == NULL)
+	{
+		print_err_msg("tokenize failed");
 		goto err_exit;
+	}
 
 	tree = Parse(toks);
 	if(tree == NULL)
+	{
+		print_err_msg("parse failed");
 		goto err_exit;
+	}
 
-	//TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "AST dump");
+	TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "AST dump");
 	
 	if(CompileTree(tree, output_asm))
+	{
+		print_err_msg("backend failed");
 		goto err_exit;
+	}
 	
 	fclose(output_asm);
 	output_asm = NULL;

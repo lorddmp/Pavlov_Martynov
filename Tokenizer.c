@@ -140,9 +140,7 @@ static int Literal(toks_t *toks, const char **s)
 			if(**s != '"')
 			{
 				print_err_msg("missing '\"'");
-				print_wrong_s(*s - lit_len);
 				free(data.val.name);
-				
 				return 0;
 			}
 
@@ -168,14 +166,15 @@ toks_t *Tokenize(const char *s)
 		TokRealloc(toks);
 
 		if (SkipComments(&s));
-		else if(Number(toks, &s));
 		else if(Lexem(toks, &s));
 		else if(Ident(toks, &s));
+		else if(Number(toks, &s));
 		else if(Literal(toks, &s));
 		else
 		{
 			print_err_msg("syntax error");
-			fprintf(stderr, colorize("-->", _BOLD_ _YELLOW_) colorize("%.20s...\n\n", _CYAN_), s);
+			print_wrong_s(s);
+			ToksDestroy(toks);
 			return NULL;
 		}
 	}

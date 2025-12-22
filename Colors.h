@@ -20,5 +20,7 @@ col expr _RESET_COLORS_
 	fprintf(stderr, colorize("%s: ", _MAGENTA_) colorize(msg, _BOLD_ _RED_) "\n", __func__)
 
 #define print_wrong_s(s) \
-	fprintf(stderr, colorize("-->", _BOLD_ _YELLOW_) "%s\n", s)
-	
+	fprintf(stderr, colorize("-->", _BOLD_ _YELLOW_) colorize("%.20s", _CYAN_) colorize("...\n\n", _BOLD_ _YELLOW_), s)
+
+#define print_wrg_msg(msg) \
+	fprintf(stderr, colorize(msg, _BOLD_ _MAGENTA_) "\n")

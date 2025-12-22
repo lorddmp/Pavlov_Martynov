@@ -139,6 +139,8 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 		case OP_EQ:
 		case OP_OR:
 		case OP_AND:
+			GnrtArifm(tree, n_var);
+			return;
 		default:
 			err_exit_msg("invalid operation");
 		}
@@ -163,9 +165,10 @@ static void GnrtOpSeq(const node_t *tree, const size_t n_var)
 {
 	assert(tree);
 	assert(ASM_OUT);
-	LEAVE_IF_ERR;
-	if(tree->data.type != TP_OP_SEQ)
-		err_exit_msg("node is not an op. sequence");
+	LEAVE_IF_ERR;		
+	
+	if (tree->data.type != TP_OP_SEQ)
+		return GnrtOp(tree, n_var);
 
 	child_t *op = tree->child;
 	while(op)
@@ -287,10 +290,10 @@ static void GnrtOr(const node_t *tree, const size_t n_var)
 
 	print_asm(";or\n"
 			  "pop rax ;lvalue\n"
+			  "pop rdx ;rvalue\n"
 			  "cmp rax, 0\n"
 			  "jne .L%lu\n"
-			  "pop rax ;rvalue\n"
-			  "cmp rax, 0\n"
+			  "cmp rdx, 0\n"
 			  "jne .L%lu\n"
 			  ";result:\n"
 			  "push 0\n"
@@ -321,10 +324,10 @@ static void GnrtAnd(const node_t *tree, const size_t n_var)
 
 	print_asm(";and\n"
 			  "pop rax ;lvalue\n"
+			  "pop rdx ;rvalue\n"
 			  "cmp rax, 0\n"
 			  "je .L%lu\n"
-			  "pop rax ;rvalue\n"
-			  "cmp rax, 0\n"
+			  "cmp rdx, 0\n"
 			  "je .L%lu\n"
 			  ";result:\n"
 			  "push 1\n"

@@ -165,7 +165,7 @@ exit:
     call_count++;
 }
 
-void PrintToks(node_data_t data[], FILE *dump_file)
+void PrintToks(node_data_t data[], FILE *dump_file, size_t limit)
 {
 	if(data == NULL || dump_file == NULL)
 	{
@@ -173,7 +173,7 @@ void PrintToks(node_data_t data[], FILE *dump_file)
 		return;
 	}
 	
-	for (size_t i = 0; ; i++)
+	for (size_t i = 0; i < limit; i++)
 	{
 		fprintf(dump_file, "[%lu]\t", i);
 		switch (data[i].type)
