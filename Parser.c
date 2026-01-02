@@ -70,6 +70,7 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetDeclFunc(node_data_t *data[]);
 static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl);
+static node_t *GetSmplKword(node_data_t *data[], const node_data_t kword);	/* simple keyword */
 static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_data_t while_or_if);
 static node_t *GetAsm(node_data_t *data[]);
 static node_t *GetAssign(node_data_t *data[], nametbl_t *nametbl);
@@ -245,22 +246,20 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
 		else
 			write_err("missing '}'", (**data).line);
 	}
+	else if((node = GetWhileIf(data, nametbl, IF))	||
+			(node = GetWhileIf(data, nametbl, WHILE)));
 	else if((node = GetAsm(data))				||
 			(node = GetReturn(data, nametbl))	||
 			(node = GetCallFunc(data, nametbl))	||
-			(node = GetAssign(data, nametbl)))
+			(node = GetAssign(data, nametbl))	||
+			(node = GetSmplKword(data, PASS))	||
+			(node = GetSmplKword(data, BREAK))	||
+			(node = GetSmplKword(data, CONTINUE)))
 	{
 		if(IS_(SEMICOLON, **data))
 			(*data)++;
 		else
 			write_err("missing ';'", (**data).line);
-	}
-	else if((node = GetWhileIf(data, nametbl, IF))	||
-			(node = GetWhileIf(data, nametbl, WHILE)));
-	else if(IS_(SEMICOLON, **data))
-	{
-		(*data)++;
-		return GetOp(data, nametbl);
 	}
 
 	return node;
@@ -274,11 +273,8 @@ static node_t *GetDeclFunc(node_data_t *data[])
 	node_t *node = NULL, *arg_node = NULL;
 	nametbl_t *nametbl = NULL;
 
-	//PrintToks(*data, stderr, 10);
-
 	if (IS_(FUNC, **data))
 	{
-	//fprintf(stderr, "hello\n");
 		(*data)++;
 		if((**data).type == TP_IDENT && IS_(OPN_PAR, (*data)[1]))
 		{
@@ -385,6 +381,22 @@ static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl)
 	return node;
 }
 
+static node_t *GetSmplKword(node_data_t *data[], const node_data_t kword)
+{
+	assert(data);
+	assert(*data);
+
+	node_t *node = NULL;
+
+	if(IS_(kword, **data))
+	{
+		node = NewNode(kword);
+		(*data)++;
+	}
+
+	return node;
+}
+
 static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_data_t while_or_if)
 {
 	assert(data);
@@ -396,11 +408,14 @@ static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_da
 
 	if(IS_(while_or_if, **data))
 	{
-		node = NewNode(while_or_if);
 		(*data)++;
+		
+		node = NewNode(while_or_if);
+		
 		if(IS_(OPN_PAR, **data))
 		{
 			(*data)++;
+			
 			if((new_node = GetOrExpr(data, nametbl)))
 			{
 				AddChild(node, new_node);
@@ -414,6 +429,16 @@ static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_da
 					AddChild(node, new_node);
 				else
 					write_err("excepted operations body", (**data).line);
+				
+				if(IS_(ELSE, **data))
+				{
+					(*data)++;
+					
+					if((new_node = GetOp(data, nametbl)))
+						AddChild(node, new_node);
+					else
+						write_err("excepted 'else' operations body", (**data).line);
+				}
 			}
 			else
 				write_err("wrong condition", (**data).line);

@@ -25,15 +25,18 @@
 #define FOR 				(const node_data_t){.type = TP_KWORD, .val.kword = KW_FOR}
 #define ASM 				(const node_data_t){.type = TP_KWORD, .val.kword = KW_ASM}
 #define RETURN				(const node_data_t){.type = TP_KWORD, .val.kword = KW_RETURN}
-
+#define PASS				(const node_data_t){.type = TP_KWORD, .val.kword = KW_PASS}
+#define BREAK				(const node_data_t){.type = TP_KWORD, .val.kword = KW_BREAK}
+#define CONTINUE			(const node_data_t){.type = TP_KWORD, .val.kword = KW_CONTINUE}
 
 #define FUNC_DECL(f_name)	(const node_data_t){.type = TP_DECL_FUNC, .val.name = f_name}
 #define FUNC_CALL(f_name)	(const node_data_t){.type = TP_CALL_FUNC, .val.name = f_name}
 #define VAR(var_id)			(const node_data_t){.type = TP_VAR, .val.id = var_id}
 #define NUM(n)				(const node_data_t){.type = TP_NUM, .val.num = n}
-#define IS_BINNODE(tree)	(tree->child && tree->child->node && tree->child->next && tree->child->next->node && tree->child->next->next == NULL)
-#define LEFT(tree)			tree->child->node
-#define RIGHT(tree)			tree->child->next->node
+#define CHILD_EXISTS(ch)	(ch && ch->node)
+#define IS_BINNODE(tr)		(CHILD_EXISTS(tr->child) && CHILD_EXISTS(tr->child->next) && !CHILD_EXISTS(tr->child->next->next))
+#define LEFT(tr)			tr->child->node
+#define RIGHT(tr)			tr->child->next->node
 
 #define LEAVE_IF_ERR    \
 	if (COMPILE_STATUS) \
@@ -70,4 +73,5 @@
 #define print_asm(fmt, ...)	fprintf(ASM_OUT, fmt, ##__VA_ARGS__)
 
 #define IS_(macro, data) ((macro).type == (data).type && !memcmp(&((macro).val), &((data).val), sizeof(node_val_t)))
+
 

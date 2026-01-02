@@ -20,13 +20,13 @@ int main(int argc, char *argv[])
 		if(strcmp(argv[i], "-o") == 0)
 		{
 			if(++i < argc && out_filename == NULL)
-				out_filename = strdup(argv[i]);
+				out_filename = argv[i];
 		}
 		else if(strcmp(argv[i], "--asm") == 0)
 		{
 			need_asm = 1;
 			if (++i < argc && out_asm_filename == NULL)
-				out_asm_filename = strdup(argv[i]);
+				out_asm_filename = argv[i];
 		}
 		else if(strcmp(argv[i], "--help") == 0)
 		{
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 			goto exit;
 		}
 		else if (in_filename == NULL)
-			in_filename = strdup(argv[i]);
+			in_filename = argv[i];
 	}
 	
 	if(in_filename == NULL)
@@ -45,17 +45,13 @@ int main(int argc, char *argv[])
 	}
 
 	if(out_filename == NULL)
-		out_filename = strdup("a.out");			/* default name */
+		out_filename = "a.out";			/* default name */
 	if(out_asm_filename == NULL)
-		out_asm_filename = strdup("asm.out");	/* default name */
+		out_asm_filename = "asm.out";	/* default name */
 
 	compile_status = Compile(in_filename, out_filename, out_asm_filename, need_asm);
 
 exit:
-	free(out_asm_filename);
-	free(out_filename);
-	free(in_filename);
-
 	if(0)	/* turned off */
 	{
 		sleep(1);
@@ -118,7 +114,7 @@ static int Compile(const char *in_filename, const char *out_filename, const char
 		goto err_exit;
 	}
 
-	TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "AST dump");
+	//TreeDumpHTML(tree, "f.dot", "./Img", "f.html", "AST dump");
 	
 	if(CompileTree(tree, output_asm))
 	{

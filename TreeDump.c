@@ -5,7 +5,7 @@ static const char *NODE_TYPE_NAME[] =
 static const char *OP_NAME[] =
 	{"+", "-", "*", "/", "\\>", "\\<", "=", "==", "or", "and"};
 static const char *KWORD_NAME[] =
-	{"if", "else", "while", "for", "continue", "break", "return", "asm", "func"};
+	{"if", "else", "while", "for", "continue", "break", "return", "pass", "asm", "func"};
 static const char *SYMB_NAME[] =
 	{"{", "}", "(", ")", ";", ",", "\""};
 

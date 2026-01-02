@@ -24,9 +24,13 @@
 #undef FOR
 #undef ASM
 #undef RETURN
+#undef PASS
+#undef BREAK
+#undef CONTINUE
 #undef FUNC_DECL
 #undef FUNC_CALL
 #undef VAR
+#undef CHILD_EXISTS
 #undef IS_BINNODE
 #undef LEFT
 #undef RIGHT

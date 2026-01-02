@@ -56,6 +56,7 @@ typedef enum kword_t
 	KW_BREAK,
 	
 	KW_RETURN,
+	KW_PASS,
 	
 	KW_ASM,
 	KW_FUNC,
@@ -148,7 +149,10 @@ static const lex_t LEXS[] =
 		{"for", FOR},
 		{"asm", ASM},
 		{"func", FUNC},
-		{"return", RETURN}
+		{"return", RETURN},
+		{"pass", PASS},
+		{"break", BREAK},
+		{"continue", CONTINUE}
 };
 
 #include "MacroUndef.h"
