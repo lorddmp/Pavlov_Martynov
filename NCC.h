@@ -89,23 +89,14 @@ typedef struct node_data_t
 {
 	node_type_t type;
 	node_val_t val;
-	
+	size_t line;	/* location token in code */
 } node_data_t;
-
-/*
-	some ideas: 
-	make table that matchs tokens to their location in line
-	in case 'compilation error' we have to print code since location.
-	
-	
-*/
 
 typedef struct node_t
 {
 	node_data_t data;
 	struct node_t *parent;
 	struct child_t *child;
-
 } node_t;
 
 typedef struct child_t
@@ -129,7 +120,7 @@ typedef struct toks_t
 
 } toks_t;
 
-#include "ShortNamesDef.h"
+#include "MacroDef.h"
 
 static const lex_t LEXS[] =
 	{
@@ -160,7 +151,7 @@ static const lex_t LEXS[] =
 		{"return", RETURN}
 };
 
-#include "ShortNamesUndef.h"
+#include "MacroUndef.h"
 
 typedef enum tree_err_t
 {
@@ -184,6 +175,28 @@ typedef struct nametbl_t
 	size_t cap;
 } nametbl_t;
 
+#define N_ALERT_LIMIT 50
+
+typedef enum alert_type_t
+{
+	AL_NOTICE,
+	AL_WARNING,
+	AL_ERROR
+} alert_type_t;
+
+typedef struct alert_t
+{
+	alert_type_t type;
+	const char *msg;
+	size_t line;
+} alert_t;
+
+typedef struct alerts_t
+{
+	alert_t alert[N_ALERT_LIMIT];
+	size_t n_alert;
+} alerts_t;
+
 static const size_t N_LEXS = sizeof(LEXS) / sizeof(lex_t);
 static const size_t MAX_REC_DEPTH = 1000;
 
@@ -203,7 +216,7 @@ node_t *NewNode(const node_data_t data);
 
 /* front-end */
 toks_t *Tokenize(const char *s);
-node_t *Parse(toks_t *toks);
+node_t *Parse(toks_t *toks, const char *filename);
 void ToksDestroy(toks_t *toks);
 
 /* back-end */

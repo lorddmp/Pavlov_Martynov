@@ -51,7 +51,7 @@ static void GnrtReturn(const node_t *tree, const size_t n_var);
 
 static size_t GetMaxID(const node_t *tree);
 /*---------------------------------------------*/
-#include "ShortNamesDef.h"
+#include "MacroDef.h"
 /*---------------------------------------------*/
 int CompileTree(const node_t *tree, FILE *asm_out)
 {
@@ -60,7 +60,7 @@ int CompileTree(const node_t *tree, FILE *asm_out)
 		print_err_msg("nullptr passed as arg(s)");
 		return 1;
 	}
-	if(!IS_(ROOT, &(tree->data)))
+	if(!IS_(ROOT, tree->data))
 	{
 		print_err_msg("I wanna be a root");
 		return 1;
@@ -265,7 +265,7 @@ static void GnrtAsm(const node_t *tree)
 	assert(tree);
 	assert(ASM_OUT);
 	LEAVE_IF_ERR;
-	if(!IS_(ASM, &(tree->data)))
+	if(!IS_(ASM, tree->data))
 		err_exit_msg("is not 'asm'");
 	if(!(tree->child && tree->child->node))
 		err_exit_msg("invalid node");
@@ -280,7 +280,7 @@ static void GnrtOr(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	assert(ASM_OUT);
-	if(!IS_(OR, &(tree->data)))
+	if(!IS_(OR, tree->data))
 		err_exit_msg("is not 'or'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("not binary 'or'");
@@ -314,7 +314,7 @@ static void GnrtAnd(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	assert(ASM_OUT);
-	if(!IS_(AND, &(tree->data)))
+	if(!IS_(AND, tree->data))
 		err_exit_msg("is not 'and'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("not binary 'and'");
@@ -458,7 +458,7 @@ static void GnrtIf(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	assert(ASM_OUT);
-	if(!IS_(IF, &(tree->data)))
+	if(!IS_(IF, tree->data))
 		err_exit_msg("is not 'if'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("is not binary");
@@ -484,7 +484,7 @@ static void GnrtWhile(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	assert(ASM_OUT);
-	if(!IS_(WHILE, &(tree->data)))
+	if(!IS_(WHILE, tree->data))
 		err_exit_msg("is not 'while'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("is not binary");
@@ -516,7 +516,7 @@ static void GnrtAssign(const node_t *tree, const size_t n_var)
 	LEAVE_IF_ERR;
 	assert(tree);
 	assert(ASM_OUT);
-	if(!IS_(ASSIGN, &(tree->data)))
+	if(!IS_(ASSIGN, tree->data))
 		err_exit_msg("is not 'assignment'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("is not binary");
@@ -614,7 +614,7 @@ static void GnrtReturn(const node_t *tree, const size_t n_var)
 {
 	LEAVE_IF_ERR;
 	assert(tree);
-	if(!IS_(RETURN, &(tree->data)))
+	if(!IS_(RETURN, tree->data))
 		err_exit_msg("is not a 'return'");
 	
 	if(tree->child && tree->child->node)
@@ -623,5 +623,5 @@ static void GnrtReturn(const node_t *tree, const size_t n_var)
 	print_asm("ret\n");
 }
 /*---------------------------------------------*/
-#include "ShortNamesUndef.h"
+#include "MacroUndef.h"
 /*---------------------------------------------*/

@@ -57,6 +57,7 @@ asm("mov rax, rbx");
 
 */
 
+static alerts_t ALERTS = {};
 
 /*-------------------------------------------*/
 static nametbl_t *TblInit(void);
@@ -147,43 +148,72 @@ static node_t *NewBinNode(const node_data_t data, node_t *l_val, node_t *r_val)
 
 	return eq;
 }
-/*-------------------------------------------*/
-#include "ShortNamesDef.h"
-/*-------------------------------------------*/
-node_t *Parse(toks_t *toks)
+
+static int PrintAlerts(const char *filename)	/* returns 1 if compilation errors occured */
 {
-	if(toks == NULL)
+	assert(filename);
+
+	int has_err = 0;
+
+	for (size_t i = 0; i < ALERTS.n_alert; i++)
 	{
-		print_err_msg("nullptr passed as tokens");
+		switch(ALERTS.alert[i].type)
+		{
+		case AL_NOTICE:
+			fprintf(stderr, colorize("notice: ", _BOLD_ _CYAN_));
+			break;
+		case AL_WARNING:
+			fprintf(stderr, colorize("warning: ", _BOLD_ _MAGENTA_));
+			break;
+		case AL_ERROR:
+			fprintf(stderr, colorize("error: ", _BOLD_ _RED_));
+			has_err = 1;
+			break;
+		default:
+			break;
+		}
+
+		fprintf(stderr, colorize("%s:%lu:\n", _BOLD_ _YELLOW_) colorize("%s\n", _BOLD_ _WHITE_), filename, ALERTS.alert[i].line, ALERTS.alert[i].msg);
+	}
+
+	return has_err;
+}
+/*-------------------------------------------*/
+#include "MacroDef.h"
+/*-------------------------------------------*/
+node_t *Parse(toks_t *toks, const char *filename)
+{
+	if(toks == NULL || filename == NULL)
+	{
+		print_err_msg("nullptr passed as arg(s)");
 		return NULL;
 	}
 
 	node_t *node = NewNode(ROOT);
-	assert(node);
 
 	node_data_t *data = toks->data;
-	node_t *new_node = GetDeclFunc(&(data));
-	if(new_node == NULL)
-	{
-		print_err_msg("There aren't any functions");
-		TreeDestroy(node);
-		return NULL;
-	}
+	// node_t *new_node = GetDeclFunc(&data);
+	node_t *new_node = NULL;
+	// if(new_node == NULL)
+	// {
+	// 	print_err_msg("There aren't any functions");
+	// 	TreeDestroy(node);
+	// 	return NULL;
+	// }
 
-	do
-	{
+	while((new_node = GetDeclFunc(&data)))
 		AddChild(node, new_node);
-		new_node = GetDeclFunc(&(data));
-	} while (new_node);
 
-	if(data->type == TP_EOF)
-		return node;
+	if(data->type != TP_EOF)
+		write_err("is not a function declaration", data->line);
 
-	print_err_msg("syntax error:");
-	fprintf(stderr, colorize("\tcompile stopped here:", _BOLD_ _YELLOW_));
-	PrintToks(data, stderr, 5);
-	TreeDestroy(node);
-	return NULL;
+	if(PrintAlerts(filename))
+	{
+		TreeDestroy(node);
+		node = NULL;
+	}
+	
+	return node;
 }
 
 static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
@@ -195,104 +225,42 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
 	node_t *node = NULL;
 	node_t *new_node = NULL;
 
-	if((new_node = GetCallFunc(data, nametbl)))
-	{
-		if(IS_(SEMICOLON, *data))
-		{
-			(*data)++;
-			node = new_node;
-		}
-		else
-		{
-			print_err_msg("missing ';'");
-			TreeDestroy(new_node);
-		}
-	}
-	else if((new_node = GetAssign(data, nametbl)))
-	{
-		if(IS_(SEMICOLON, *data))
-		{
-			(*data)++;
-			node = new_node;
-		}
-		else
-		{
-			print_err_msg("missing ';'");
-			TreeDestroy(new_node);
-		}
-	}
-	else if((new_node = GetReturn(data, nametbl)))
-	{
-		if(IS_(SEMICOLON, *data))
-		{
-			(*data)++;
-			node = new_node;
-		}
-		else
-		{
-			print_err_msg("missing ';'");
-			TreeDestroy(new_node);
-		}
-	}
-	else if((new_node = GetWhileIf(data, nametbl, IF)) || (new_node = GetWhileIf(data, nametbl, WHILE)))
-	{
-		node = new_node;
-	}
-	else if((new_node = GetAsm(data)))
-	{
-		if(IS_(SEMICOLON, *data))
-		{
-			(*data)++;
-			node = new_node;
-		}
-		else
-		{
-			print_err_msg("missing ';'");
-			TreeDestroy(new_node);
-		}
-	}
-	else if(IS_(OPN_BRC, *data))
+	if(IS_(OPN_BRC, **data))
 	{
 		(*data)++;
 		node = NewNode(OP_SEQ);
-		assert(node);
 
 		new_node = GetOp(data, nametbl);
-		if(new_node == NULL)
-		{
-			print_err_msg("syntax error: -->");
-			PrintToks(*data, stderr, 5);
-			TreeDestroy(node);
-			return NULL;
-		}
+		if(new_node == NULL)	/* in general, it isn't necessary... */
+			write_err("excepted operation(s)", (**data).line);
 
-		do
+		while(new_node)
 		{
 			AddChild(node, new_node);
 			new_node = GetOp(data, nametbl);
-		} while (new_node);
+		}
 		
-		if(IS_(CLS_BRC, *data))
-		{
+		if(IS_(CLS_BRC, **data))
 			(*data)++;
-		}
 		else
-		{
-			print_err_msg("missing '}': -->");
-			PrintToks(*data, stderr, 5);
-			TreeDestroy(node);
-			return NULL;
-		}
+			write_err("missing '}'", (**data).line);
 	}
-	else if(IS_(SEMICOLON, *data))
+	else if((node = GetCallFunc(data, nametbl))			||
+			(node = GetAssign(data, nametbl))			||
+			(node = GetReturn(data, nametbl))			||
+			(node = GetAsm(data)))
 	{
-		do
+		if(IS_(SEMICOLON, **data))
 			(*data)++;
-		while (IS_(SEMICOLON, *data));
+		else
+			write_err("missing ';'", (**data).line);
 	}
-	else
+	else if((node = GetWhileIf(data, nametbl, IF))	||
+			(node = GetWhileIf(data, nametbl, WHILE)));
+	else if(IS_(SEMICOLON, **data))
 	{
-		TreeDestroy(new_node);
+		(*data)++;
+		return GetOp(data, nametbl);
 	}
 
 	return node;
@@ -306,67 +274,53 @@ static node_t *GetDeclFunc(node_data_t *data[])
 	node_t *node = NULL, *arg_node = NULL;
 	nametbl_t *nametbl = NULL;
 
-	if(IS_(FUNC, *data))
+	//PrintToks(*data, stderr, 10);
+
+	if (IS_(FUNC, **data))
 	{
+	//fprintf(stderr, "hello\n");
 		(*data)++;
-		if((**data).type == TP_IDENT && IS_(OPN_PAR, *data + 1))
+		if((**data).type == TP_IDENT && IS_(OPN_PAR, (*data)[1]))
 		{			
 			node = NewNode(FUNC_DECL((**data).val.name));
-			AddChild(node, NewNode(PARAM));
-			nametbl = TblInit();
 			(*data) += 2;
+			AddChild(node, NewNode(PARAM));
 			
-			while((**data).type == TP_IDENT)
+			nametbl = TblInit();
+			
+			while((**data).type == TP_IDENT)	/* arguments */
 			{
 				arg_node = GetVar(data, nametbl);
-				if(arg_node == NULL)
-				{
-					print_err_msg("invalid arguments");
-					goto err_exit;
-				}
-				
-				AddChild(node->child->node, arg_node);
-				
-				if(IS_(COMMA, *data))
+				if(arg_node)
+					AddChild(node->child->node, arg_node);
+				else
+					write_err("invalid function's arguments", (**data).line);
+
+				if(IS_(COMMA, **data))
 					(*data)++;
 				else
 					break;
 			}
 			
-			if (!IS_(CLS_PAR, *data))
-			{
-				print_err_msg("missing ',' or ')'");
-				goto err_exit;
-			}
-
-			(*data)++;
+			if (IS_(CLS_PAR, **data))
+				(*data)++;
+			else
+				write_err("is it function declaration? excepted ',' or ')'", (**data).line);
+			
 			node->child->node->data.val.id = nametbl->size;
 
 			arg_node = GetOp(data, nametbl);
-			if(arg_node == NULL || arg_node->data.type != TP_OP_SEQ)
-			{
-				print_err_msg("invalid body");
-				TreeDestroy(arg_node);
-				goto err_exit;
-			}
-
-			AddChild(node, arg_node);
+			if(arg_node && arg_node->data.type == TP_OP_SEQ)
+				AddChild(node, arg_node);
+			else
+				write_err("excepted function's body", (**data).line);
 		}
 		else
-		{
-			print_err_msg("missing identifier");
-			goto err_exit;
-		}
+			write_err("function's signature missing", (**data).line);
 	}
 
 	TblDestroy(nametbl);
 	return node;
-err_exit:
-	PrintToks(*data, stderr, 5);
-	TreeDestroy(node);
-	
-	TblDestroy(nametbl);
-	return NULL;
 }
 
 static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
@@ -377,7 +331,7 @@ static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
 
 	node_t *node = NULL, *arg_node = NULL;
 
-	if((**data).type == TP_IDENT && IS_(OPN_PAR, *data + 1))
+	if((**data).type == TP_IDENT && IS_(OPN_PAR, (*data)[1]))
 	{
 		node = NewNode(FUNC_CALL((**data).val.name));
 		AddChild(node, NewNode(PARAM));
@@ -388,20 +342,15 @@ static node_t *GetCallFunc(node_data_t *data[], nametbl_t *nametbl)
 		{
 			param_count++;
 			AddChild(node->child->node, arg_node);
-			if(IS_(COMMA, *data))
+			if(IS_(COMMA, **data))
 				(*data)++;
 			else
 				break;
 		}
-		if(IS_(CLS_PAR, *data))
+		if(IS_(CLS_PAR, **data))
 			(*data)++;
 		else
-		{
-			print_err_msg("missing ',' or ')'");
-			PrintToks(*data, stderr, 5);
-			TreeDestroy(node);
-			return NULL;
-		}
+			write_err("is it function call? excepted ',' or ')'", (**data).line);
 
 		node->child->node->data.val.id = param_count;
 	}
@@ -419,22 +368,18 @@ static node_t *GetReturn(node_data_t *data[], nametbl_t *nametbl)
 
 	node_t *node = NULL, *arg_node = NULL;
 
-	if(IS_(RETURN, *data))
+	if(IS_(RETURN, **data))
 	{
 		node = NewNode(RETURN);
 		(*data)++;
-		
-		if(!IS_(SEMICOLON, *data))
+
+		if(!IS_(SEMICOLON, **data))
 		{
 			arg_node = GetOrExpr(data, nametbl);
-				
-			if(arg_node == NULL)
-			{
-				print_err_msg("missing expression");
-				return NULL;
-			}
-	
-			AddChild(node, arg_node);
+			if(arg_node)
+				AddChild(node, arg_node);
+			else
+				write_err("excepted ';'", (**data).line);
 		}
 	}
 
@@ -447,45 +392,35 @@ static node_t *GetWhileIf(node_data_t *data[], nametbl_t *nametbl, const node_da
 	assert(*data);
 	assert(nametbl);
 
-	node_t *node = NewNode(while_or_if);
-	assert(node);
+	node_t *node = NULL;
 	node_t *new_node = NULL;
 
-	if(IS_(while_or_if, *data))
+	if(IS_(while_or_if, **data))
 	{
+		node = NewNode(while_or_if);
 		(*data)++;
-		if(IS_(OPN_PAR, *data))
+		if(IS_(OPN_PAR, **data))
 		{
 			(*data)++;
 			if((new_node = GetOrExpr(data, nametbl)))
 			{
-				if(!IS_(CLS_PAR, *data))
-				{
-					print_err_msg("wrong condition");
-					TreeDestroy(new_node);
-					TreeDestroy(node);
-					return NULL;
-				}
-				(*data)++;
-				
 				AddChild(node, new_node);
-				if((new_node = GetOp(data, nametbl)))
-				{
-					AddChild(node, new_node);
-				}
+				
+				if(IS_(CLS_PAR, **data))
+					(*data)++;
 				else
-					print_err_msg("missing operator");
+					write_err("missing ')'", (**data).line);
+
+				if((new_node = GetOp(data, nametbl)))
+					AddChild(node, new_node);
+				else
+					write_err("excepted operations body", (**data).line);
 			}
 			else
-				print_err_msg("wrong condition");
+				write_err("wrong condition", (**data).line);
 		}
 		else
-			print_err_msg("missing '('");
-	}
-	else
-	{
-		TreeDestroy(node);
-		return NULL;
+			write_err("missing '('", (**data).line);
 	}
 
 	return node;
@@ -497,12 +432,14 @@ static node_t *GetAsm(node_data_t *data[])
 	assert(*data);
 
 	node_t *node = NULL;
-	if (IS_(ASM, *data))
+	if (IS_(ASM, **data))
 	{
 		(*data)++;
-		if(IS_(OPN_PAR, *data))
+		
+		if(IS_(OPN_PAR, **data))
 		{
 			(*data)++;
+			
 			if((**data).type == TP_LITERAL)
 			{
 				node = NewNode(ASM);
@@ -510,19 +447,15 @@ static node_t *GetAsm(node_data_t *data[])
 				(*data)++;
 			}
 			else
-				print_err_msg("argument isn't a literal");
+				write_err("excepted a literal", (**data).line);
 		}
 		else
-			print_err_msg("missing '('");
-		
-		if(IS_(CLS_PAR, *data))
+			write_err("missing '('", (**data).line);
+
+		if(IS_(CLS_PAR, **data))
 			(*data)++;
 		else
-		{
-			print_err_msg("missing ')'");
-			TreeDestroy(node);
-			node = NULL;
-		}
+			write_err("missing ')'", (**data).line);
 	}
 
 	return node;
@@ -534,40 +467,28 @@ static node_t *GetAssign(node_data_t *data[], nametbl_t *nametbl)
 	assert(*data);
 	assert(nametbl);
 
-	node_t *node = NewNode(ASSIGN);
-	assert(node);
+	node_t *node = NULL;
 	node_t *new_node = NULL;
-	
+
 	if((new_node = GetVar(data, nametbl)))
 	{
-		AddChild(node, new_node);
-		if(IS_(ASSIGN, *data))
+		if(IS_(ASSIGN, **data))
 		{
 			(*data)++;
+
+			node = NewNode(ASSIGN);
+			AddChild(node, new_node);
+
 			if((new_node = GetOrExpr(data, nametbl)))
-			{
 				AddChild(node, new_node);
-			}
 			else
-			{
-				print_err_msg("missing expression");
-				goto err_exit;
-			}
+				write_err("missing rvalue", (**data).line);
 		}
 		else
-		{
-			print_err_msg("missing assign");
-			goto err_exit;
-		}
+			TreeDestroy(new_node);
 	}
-	else
-		goto err_exit;
 
 	return node;
-
-err_exit:
-	TreeDestroy(node);
-	return NULL;
 }
 
 static node_t *GetOrExpr(node_data_t *data[], nametbl_t *nametbl)
@@ -580,20 +501,17 @@ static node_t *GetOrExpr(node_data_t *data[], nametbl_t *nametbl)
 	if(node == NULL)
 		return NULL;
 	
-	while(IS_(OR, *data))
+	while(IS_(OR, **data))
 	{
 		(*data)++;
 
-		arg_node = GetAndExpr(data, nametbl);
-		if(arg_node == NULL)
+		if((arg_node = GetAndExpr(data, nametbl)))
 		{
-			print_err_msg("missing expression");
-			TreeDestroy(node);
-			return NULL;
+			new_node = NewBinNode(OR, node, arg_node);
+			node = new_node;
 		}
-
-		new_node = NewBinNode(OR, node, arg_node);
-		node = new_node;
+		else
+			write_err("missing expression (right from 'or')", (**data).line);
 	}
 
 	return node;
@@ -605,23 +523,21 @@ static node_t *GetAndExpr(node_data_t *data[], nametbl_t *nametbl)
 	assert(*data);
 	assert(nametbl);
 
-	node_t *node = GetCompExpr(data, nametbl), *arg_node = NULL;
+	node_t *node = GetCompExpr(data, nametbl), *new_node = NULL, *arg_node = NULL;
 	if(node == NULL)
 		return NULL;
 	
-	while(IS_(AND, *data))
+	while(IS_(AND, **data))
 	{
 		(*data)++;
 
-		arg_node = GetCompExpr(data, nametbl);
-		if(arg_node == NULL)
+		if((arg_node = GetCompExpr(data, nametbl)))
 		{
-			print_err_msg("missing expression");
-			TreeDestroy(node);
-			return NULL;
+			new_node = NewBinNode(AND, node, arg_node);
+			node = new_node;
 		}
-		
-		node = NewBinNode(AND, node, arg_node);
+		else
+			write_err("missing expression (right from 'and')", (**data).line);
 	}
 
 	return node;
@@ -634,22 +550,18 @@ static node_t *GetCompExpr(node_data_t *data[], nametbl_t *nametbl)
 	assert(nametbl);
 
 	node_t *node = GetExpr(data, nametbl), *arg_node = NULL;
-	
-	
-	if(IS_(GREATER, *data) || IS_(LESS, *data) || IS_(EQ, *data))
+	if(node == NULL)
+		return NULL;
+
+	if(IS_(GREATER, **data) || IS_(LESS, **data) || IS_(EQ, **data))
 	{
 		node_data_t op = **data;
 		(*data)++;
 
-		arg_node = GetExpr(data, nametbl);
-		if(arg_node == NULL)
-		{
-			print_err_msg("missing expression");
-			TreeDestroy(node);
-			return NULL;
-		}
-
-		node = NewBinNode(op, node, arg_node);
+		if((arg_node = GetExpr(data, nametbl)))
+			node = NewBinNode(op, node, arg_node);
+		else
+			write_err("missing expression (right from compare)", (**data).line);
 	}
 
 	return node;
@@ -664,28 +576,23 @@ static node_t *GetExpr(node_data_t *data[], nametbl_t *nametbl)
 	node_t *new_node = NULL, *arg_node = NULL;
 	node_t *node = GetTemp(data, nametbl);
 	
-	while(IS_(ADD, *data) || IS_(SUB, *data))
+	while(IS_(ADD, **data) || IS_(SUB, **data))
 	{
+		new_node = NewNode(**data);
+		(*data)++;
+		
 		if(node == NULL)
 		{
-			print_wrg_msg("ncc 1.0 forbids unary operators");
+			write_wrg("ncc 1.0 forbids unary operators", (**data).line);
 			node = NewNode(NUM(0));
-		}
-		
-		new_node = NewNode(**data);
-		assert(new_node);
-		(*data)++;
-
+		}		
 		AddChild(new_node, node);
-		arg_node = GetTemp(data, nametbl);
-		if(arg_node == NULL)
-		{
-			TreeDestroy(new_node);
-			//TreeDestroy(node);
-			return NULL;
-		}
+		
+		if((arg_node = GetTemp(data, nametbl)))
+			AddChild(new_node, arg_node);
+		else
+			write_err("missing right expression (from '+' or '-')", (**data).line);
 
-		AddChild(new_node, arg_node);
 		node = new_node;
 	}
 
@@ -702,23 +609,19 @@ static node_t *GetTemp(node_data_t *data[], nametbl_t *nametbl)
 	node_t *node = GetPrim(data, nametbl);
 	if(node == NULL)
 		return NULL;
-	
-	while(IS_(MUL, *data) || IS_(DIV, *data))
+
+	while(IS_(MUL, **data) || IS_(DIV, **data))
 	{
 		new_node = NewNode(**data);
-		assert(new_node);
 		(*data)++;
 
 		AddChild(new_node, node);
-		arg_node = GetPrim(data, nametbl);
-		if(arg_node == NULL)
-		{
-			TreeDestroy(new_node);
-			//TreeDestroy(node);
-			return NULL;
-		}
+		
+		if((arg_node = GetPrim(data, nametbl)))
+			AddChild(new_node, arg_node);
+		else
+			write_err("missing right expression (from '*' or '/')", (**data).line);
 
-		AddChild(new_node, arg_node);
 		node = new_node;
 	}
 
@@ -733,20 +636,18 @@ static node_t *GetPrim(node_data_t *data[], nametbl_t *nametbl)
 
 	node_t *node = NULL;
 
-	if(IS_(OPN_PAR, *data))
+	if(IS_(OPN_PAR, **data))
 	{
 		(*data)++;
 		if((node = GetOrExpr(data, nametbl)))
 		{
-			if(IS_(CLS_PAR, *data))
-			{
+			if(IS_(CLS_PAR, **data))
 				(*data)++;
-			}
 			else
-				print_err_msg("missing ')'");
+				write_err("missing ')'", (**data).line);
 		}
 		else
-			print_err_msg("missing expression");
+			write_err("missing expression", (**data).line);
 	}
 	else if((node = GetCallFunc(data, nametbl)));
 	else if((node = GetNum(data)));
@@ -787,4 +688,4 @@ static node_t *GetVar(node_data_t *data[], nametbl_t *nametbl)
 	return NULL;
 }
 /*-------------------------------------------*/
-#include "ShortNamesUndef.h"
+#include "MacroUndef.h"

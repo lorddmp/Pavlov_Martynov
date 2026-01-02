@@ -1,5 +1,7 @@
 #include "NCC.h"
 
+static size_t CRNT_LINE = 1;	/* global lines counter */
+	
 /*-------------------------------------------*/
 static void TokRealloc(toks_t *toks);
 static int SkipComments(const char **s);
@@ -33,16 +35,22 @@ static int SkipComments(const char **s)
 	const char *old_s = *s;
 	
 	while (isspace(**s))
+	{
+		if(**s == '\n')
+			CRNT_LINE++;
+
 		(*s)++;
-		
+	}
+
 	if(strncmp(*s, "/*", 2) == 0)
 	{
 		(*s) += 2;
 		while(**s && strncmp(*s, "*/", 2))
 		{
+			if(**s == '\n')
+				CRNT_LINE++;
+
 			(*s)++;
-			while (**s && **s != '*')
-				(*s)++;
 		}
 		
 		if(**s)
@@ -67,7 +75,9 @@ static int Lexem(toks_t *toks, const char **s)
 	{
 		if(strncmp(LEXS[i].name, *s, strlen(LEXS[i].name)) == 0)
 		{
-			toks->data[toks->size++] = LEXS[i].data;
+			toks->data[toks->size] = LEXS[i].data;
+			toks->data[toks->size].line = CRNT_LINE;
+			toks->size++;
 			(*s) += strlen(LEXS[i].name);
 			return 1;
 		}
@@ -82,19 +92,23 @@ static int Number(toks_t *toks, const char **s)
 	assert(s);
 	assert(*s);
 
-	const char *old_s = *s;
+	//const char *old_s = *s;
 	char *end_s = NULL;
 	long num = strtol(*s, &end_s, 10);
+	assert(end_s);
 
-	if(isalpha(*end_s) || *end_s == '_')
-		return 0;
-	
-	(*s) += end_s - old_s;
-
-	if(*s == old_s)
+	if(isalpha(*end_s) || *end_s == '_')	/* letter or '_' can't follow after number */
 		return 0;
 
-	toks->data[toks->size++] = (const node_data_t){.type = TP_NUM, .val.num = num};
+	if(end_s == *s)
+		return 0;
+
+	//toks->data[toks->size++] = (const node_data_t){.type = TP_NUM, .val.num = num};
+	toks->data[toks->size] = NUM(num);
+	toks->data[toks->size].line = CRNT_LINE;
+	toks->size++;
+
+	*s = end_s;
 
 	return 1;
 }
@@ -108,17 +122,21 @@ static int Ident(toks_t *toks, const char **s)
 	if(isdigit(**s))
 		return 0;
 
-	int var_len = 0;
-	node_data_t data = {.type = TP_IDENT};
-	if (sscanf(*s, "%m[A-Za-z0-9_]%n", &(data.val.name), &var_len) > 0)
+	char *name = NULL;
+	int name_len = 0;
+	if (sscanf(*s, "%m[A-Za-z0-9_]%n", &name, &name_len) > 0)
 	{
-		(*s) += var_len;
-		toks->data[toks->size++] = data;
+		toks->data[toks->size].type = TP_IDENT;
+		toks->data[toks->size].val.name = name;
+		toks->data[toks->size].line = CRNT_LINE;
+		toks->size++;
+		
+		(*s) += name_len;
 
 		return 1;
 	}
 
-	free(data.val.name);
+	free(name);
 	return 0;
 }
 
@@ -132,21 +150,25 @@ static int Literal(toks_t *toks, const char **s)
 	{
 		(*s)++;
 		
-		node_data_t data = (const node_data_t){.type = TP_LITERAL};
+		//node_data_t data = (const node_data_t){.type = TP_LITERAL};
+		char *name = NULL;
 		int lit_len = 0;
-		if (sscanf(*s, "%m[^\"]%n", &(data.val.name), &lit_len) > 0)
+		if (sscanf(*s, "%m[^\"]%n", &name, &lit_len) > 0)
 		{
+			toks->data[toks->size].line = CRNT_LINE;
 			(*s) += lit_len;
 			if(**s != '"')
 			{
 				print_err_msg("missing '\"'");
-				free(data.val.name);
+				free(name);
 				return 0;
 			}
 
 			(*s)++;
 
-			toks->data[toks->size++] = data;
+			toks->data[toks->size].type = TP_LITERAL;
+			toks->data[toks->size].val.name = name;
+			toks->size++;
 			return 1;
 		}
 	}

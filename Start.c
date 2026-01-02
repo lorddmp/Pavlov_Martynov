@@ -35,7 +35,7 @@ int Compile(const char *in_filename, const char *out_filename, const char *out_a
 		goto err_exit;
 	}
 
-	tree = Parse(toks);
+	tree = Parse(toks, in_filename);
 	if(tree == NULL)
 	{
 		print_err_msg("parse failed");

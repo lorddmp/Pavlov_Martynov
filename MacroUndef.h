@@ -32,6 +32,10 @@
 #undef RIGHT
 
 #undef LEAVE_IF_ERR
-#undef err_exit_void
+#undef err_exit_msg
+#undef write_err
+#undef write_wrg
+#undef write_ntc
+
 #undef print_asm
 #undef IS_
