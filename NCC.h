@@ -222,5 +222,3 @@ void ToksDestroy(toks_t *toks);
 /* back-end */
 int CompileTree(const node_t *tree, FILE *asm_out);
 
-/* start */
-int Compile(const char *in_filename, const char *out_filename, const char *out_asm_filename, const int need_asm);

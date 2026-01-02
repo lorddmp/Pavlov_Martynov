@@ -245,10 +245,10 @@ static node_t *GetOp(node_data_t *data[], nametbl_t *nametbl)
 		else
 			write_err("missing '}'", (**data).line);
 	}
-	else if((node = GetCallFunc(data, nametbl))			||
-			(node = GetAssign(data, nametbl))			||
-			(node = GetReturn(data, nametbl))			||
-			(node = GetAsm(data)))
+	else if((node = GetAsm(data))				||
+			(node = GetReturn(data, nametbl))	||
+			(node = GetCallFunc(data, nametbl))	||
+			(node = GetAssign(data, nametbl)))
 	{
 		if(IS_(SEMICOLON, **data))
 			(*data)++;
@@ -281,7 +281,7 @@ static node_t *GetDeclFunc(node_data_t *data[])
 	//fprintf(stderr, "hello\n");
 		(*data)++;
 		if((**data).type == TP_IDENT && IS_(OPN_PAR, (*data)[1]))
-		{			
+		{
 			node = NewNode(FUNC_DECL((**data).val.name));
 			(*data) += 2;
 			AddChild(node, NewNode(PARAM));
@@ -309,8 +309,7 @@ static node_t *GetDeclFunc(node_data_t *data[])
 			
 			node->child->node->data.val.id = nametbl->size;
 
-			arg_node = GetOp(data, nametbl);
-			if(arg_node && arg_node->data.type == TP_OP_SEQ)
+			if((arg_node = GetOp(data, nametbl)))
 				AddChild(node, arg_node);
 			else
 				write_err("excepted function's body", (**data).line);
