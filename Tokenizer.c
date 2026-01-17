@@ -86,6 +86,7 @@ static int Lexem(toks_t *toks, const char **s)
 	return 0;
 }
 
+#include "MacroDef.h"
 static int Number(toks_t *toks, const char **s)
 {
 	assert(toks);
@@ -112,6 +113,7 @@ static int Number(toks_t *toks, const char **s)
 
 	return 1;
 }
+#include "MacroUndef.h"
 
 static int Ident(toks_t *toks, const char **s)
 {

@@ -4,14 +4,18 @@
 
 /*
 Parse ::= DeclFunc+ 'EOF'
-Op ::= CallFunc ';' | Assign ';' | Return ';' | If | While | Asm ';' | '{' Op+ '}' | ';'
+Op ::= CallFunc ';' | Assign ';' | Return ';' | Pass ';' | Break ';' | Continue ';' | If | While | Asm ';' | '{' Op+ '}'
 
 DeclFunc ::= 'func' '.' '(' {Var ','}* ')' Op
 CallFunc ::= . '(' {OrExpr','}* ')'
 
 Return ::= 'return' OrExpr
+Pass ::= 'pass'
+Break ::= 'break'
+Continue ::= 'continue'
 If ::= 'if' '(' OrExpr ')' Op {'else' Op}
 While ::= 'while' '(' OrExpr ')' Op {'else' Op}
+	while-else still is not implemented
 //For ::= Var '~' ['[''('] Var | Num [']'')'] Op {'else' Op}
 Asm ::= 'asm' '(' '"'.'"' ')'
 
@@ -22,7 +26,13 @@ AndExpr ::= CompExpr{['and']CompExpr}*
 CompExpr ::= Expr{['<''>''==']Expr}
 Expr ::= Temp{['+''-']Temp}*
 Temp ::= Prim{['*''/']Prim}*
-Prim ::= '(' OrExpr ')' | Num | Var | CallFunc
+Prim ::= '(' OrExpr ')' | CallFunc | Num | VarExpr
+
+VarExpr ::= Varadr | deref | Var
+
+Varadr ::= '&' Var
+Deref ::= '[' OrExpr ']'
+
 Num ::= ['0'-'9']+
 Var ::= ['A'-'Z', 'a'-'z', '0'-'9', '_']+
 */
@@ -38,7 +48,7 @@ while(...)
 
 for i ~ (1, 10]
 {
-	
+
 }
 
 do
@@ -52,8 +62,6 @@ do
 } for i ~ [0, 10)
 
 asm("mov rax, rbx");
-
-
 
 */
 
@@ -80,8 +88,13 @@ static node_t *GetCompExpr(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetExpr(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetTemp(node_data_t *data[], nametbl_t *nametbl);
 static node_t *GetPrim(node_data_t *data[], nametbl_t *nametbl);
-static node_t *GetNum(node_data_t *data[]);
+
+static node_t *GetVarExpr(node_data_t *data[], nametbl_t *nametbl);
+static node_t *GetVarAdr(node_data_t *data[], nametbl_t *nametbl);
+static node_t *GetDeref(node_data_t *data[], nametbl_t *nametbl);
+
 static node_t *GetVar(node_data_t *data[], nametbl_t *nametbl);
+static node_t *GetNum(node_data_t *data[]);
 /*-------------------------------------------*/
 static nametbl_t *TblInit(void)
 {
@@ -494,7 +507,7 @@ static node_t *GetAssign(node_data_t *data[], nametbl_t *nametbl)
 	node_t *node = NULL;
 	node_t *new_node = NULL;
 
-	if((new_node = GetVar(data, nametbl)))
+	if((new_node = GetVarExpr(data, nametbl)))
 	{
 		if(IS_(ASSIGN, **data))
 		{
@@ -676,7 +689,78 @@ static node_t *GetPrim(node_data_t *data[], nametbl_t *nametbl)
 	else if((node = GetCallFunc(data, nametbl)));
 	else if((node = GetNum(data)));
 	else
+		node = GetVarExpr(data, nametbl);
+
+	return node;
+}
+
+
+static node_t *GetVarExpr(node_data_t *data[], nametbl_t *nametbl)
+{
+	assert(data);
+	assert(*data);
+	assert(nametbl);
+
+	node_t *node = NULL;
+	
+	if((node = GetVarAdr(data, nametbl)));
+	else if((node = GetDeref(data, nametbl)));
+	else
 		node = GetVar(data, nametbl);
+
+	return node;
+}
+
+static node_t *GetVarAdr(node_data_t *data[], nametbl_t *nametbl)
+{
+	assert(data);
+	assert(*data);
+	assert(nametbl);
+
+	node_t *node = NULL;
+
+	if((**data).type == TP_TAKEADDR)
+	{
+		(*data)++;
+
+		if ((**data).type == TP_IDENT)
+		{
+			node = NewNode(TAKEADDR(TblGetID((**data).val.name, nametbl)));
+
+			(*data)++;
+		}
+		else
+			write_err("excepted variable after '&'", (**data).line);
+	}
+
+	return node;
+}
+
+static node_t *GetDeref(node_data_t *data[], nametbl_t *nametbl)
+{
+	assert(data);
+	assert(*data);
+	assert(nametbl);
+
+	node_t *node = NULL, *op_node = NULL;
+	
+	if(IS_(OPN_BRK, **data))
+	{
+		(*data)++;
+
+		if((op_node = GetOrExpr(data, nametbl)))
+		{
+			node = NewNode(DEREF);
+			AddChild(node, op_node);
+		}
+		else
+			write_err("excepted expression in '[]'", (**data).line);
+		
+		if(IS_(CLS_BRK, **data))
+			(*data)++;
+		else
+			write_err("missing ']'", (**data).line);
+	}
 
 	return node;
 }

@@ -1,6 +1,7 @@
 #define ROOT				(const node_data_t){.type = TP_ROOT, .val.num = 0}
 #define OP_SEQ				(const node_data_t){.type = TP_OP_SEQ, .val.num = 0}
 #define PARAM				(const node_data_t){.type = TP_PARAM, .val.num = 0}
+#define DEREF				(const node_data_t){.type = TP_DEREF, .val.num = 0}
 
 #define OPN_BRC				(const node_data_t){.type = TP_SYMB, .val.symb = SYM_OPN_BRC}
 #define CLS_BRC 			(const node_data_t){.type = TP_SYMB, .val.symb = SYM_CLS_BRC}
@@ -8,6 +9,8 @@
 #define CLS_PAR 			(const node_data_t){.type = TP_SYMB, .val.symb = SYM_CLS_PAR}
 #define SEMICOLON 			(const node_data_t){.type = TP_SYMB, .val.symb = SYM_SEMICOL}
 #define COMMA 				(const node_data_t){.type = TP_SYMB, .val.symb = SYM_COMMA}
+#define OPN_BRK				(const node_data_t){.type = TP_SYMB, .val.symb = SYM_OPN_BRK}
+#define CLS_BRK				(const node_data_t){.type = TP_SYMB, .val.symb = SYM_CLS_BRK}
 #define EQ 					(const node_data_t){.type = TP_OP, .val.op = OP_EQ}
 #define ASSIGN 				(const node_data_t){.type = TP_OP, .val.op = OP_ASSIGN}
 #define ADD 				(const node_data_t){.type = TP_OP, .val.op = OP_ADD}
@@ -32,6 +35,7 @@
 #define FUNC_DECL(f_name)	(const node_data_t){.type = TP_DECL_FUNC, .val.name = f_name}
 #define FUNC_CALL(f_name)	(const node_data_t){.type = TP_CALL_FUNC, .val.name = f_name}
 #define VAR(var_id)			(const node_data_t){.type = TP_VAR, .val.id = var_id}
+#define TAKEADDR(var_id)	(const node_data_t){.type = TP_TAKEADDR, .val.id = var_id}
 #define NUM(n)				(const node_data_t){.type = TP_NUM, .val.num = n}
 #define CHILD_EXISTS(ch)	(ch && ch->node)
 #define IS_BINNODE(tr)		(CHILD_EXISTS(tr->child) && CHILD_EXISTS(tr->child->next) && !CHILD_EXISTS(tr->child->next->next))

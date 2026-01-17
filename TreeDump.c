@@ -1,13 +1,13 @@
 #include "NCC.h"
 /*---------------------------------------------------------*/
 static const char *NODE_TYPE_NAME[] =
-	{"eof", "root", "number", "operation", "op. sequence", "identifier", "parameters", "variable", "keyword", "symbol", "decl function", "call function", "literal"};
+	{"eof", "root", "number", "operation", "op. sequence", "identifier", "parameters", "variable", "keyword", "symbol", "decl function", "call function", "literal", "&", "[]"};
 static const char *OP_NAME[] =
 	{"+", "-", "*", "/", "\\>", "\\<", "=", "==", "or", "and"};
 static const char *KWORD_NAME[] =
 	{"if", "else", "while", "for", "continue", "break", "return", "pass", "asm", "func"};
 static const char *SYMB_NAME[] =
-	{"{", "}", "(", ")", ";", ",", "\""};
+	{"{", "}", "(", ")", ";", ",", "\"", "[", "]"};
 
 /*---------------------------------------------------------*/
 static void PrintNodeData(const node_data_t data, FILE *out_file);
@@ -43,6 +43,7 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 		break;
 	case TP_VAR:
 	case TP_PARAM:
+	case TP_TAKEADDR:
 		data_s = NULL;
 		data_num = (long)data.val.id;
 		break;
@@ -52,6 +53,7 @@ static void PrintNodeData(const node_data_t data, FILE *out_file)
 	case TP_IDENT:
 		data_s = data.val.name;
 		break;
+	case TP_DEREF:
 	case TP_ROOT:
 	case TP_OP_SEQ:
 		break;
@@ -196,6 +198,9 @@ void PrintToks(node_data_t data[], FILE *dump_file, size_t limit)
 		case TP_LITERAL:
 			fprintf(dump_file, "lit {%s}", data[i].val.name);
 			break;
+		case TP_TAKEADDR:
+			fprintf(dump_file, "takeaddr (&)");
+			break;
 		case TP_EOF:
 			fprintf(dump_file, "EOF\n");
 			return;
@@ -205,6 +210,7 @@ void PrintToks(node_data_t data[], FILE *dump_file, size_t limit)
 		case TP_DECL_FUNC:
 		case TP_CALL_FUNC:
 		case TP_VAR:
+		case TP_DEREF:
 		default:
 			print_err_msg("datatype is out of range 'node_type_t'");
 			break;

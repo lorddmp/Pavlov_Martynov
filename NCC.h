@@ -25,7 +25,8 @@ typedef enum node_type_t
 	TP_DECL_FUNC,
 	TP_CALL_FUNC,
 	TP_LITERAL,
-
+	TP_TAKEADDR,
+	TP_DEREF,
 } node_type_t;
 
 typedef enum op_t
@@ -40,7 +41,6 @@ typedef enum op_t
 	OP_EQ,
 	OP_OR,
 	OP_AND,
-
 } op_t;
 
 typedef enum kword_t
@@ -60,7 +60,6 @@ typedef enum kword_t
 	
 	KW_ASM,
 	KW_FUNC,
-
 } kword_t;
 
 typedef enum symb_t
@@ -71,8 +70,9 @@ typedef enum symb_t
 	SYM_CLS_PAR,
 	SYM_SEMICOL,
 	SYM_COMMA,
-	SYM_QUOTE
-
+	SYM_QUOTE,
+	SYM_OPN_BRK,
+	SYM_CLS_BRK,
 } symb_t;
 
 typedef union node_val_t
@@ -131,7 +131,9 @@ static const lex_t LEXS[] =
 		{")", CLS_PAR},
 		{";", SEMICOLON},
 		{",", COMMA},
-		
+		{"&", TAKEADDR(0)},
+		{"[",OPN_BRK},
+		{"]",CLS_BRK},
 		{"==", EQ},
 		{"=", ASSIGN},
 		{"+", ADD},

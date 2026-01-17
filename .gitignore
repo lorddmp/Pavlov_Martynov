@@ -9,6 +9,8 @@
 *.txt
 /Img
 
+!CMakeLists.txt
+
 *.fdb_latexmk
 *.fls
 *.synctetx.gz
@@ -18,3 +20,4 @@
 *.png
 *.asm
 ncc
+/build

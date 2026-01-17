@@ -49,9 +49,12 @@ static void GnrtOp(const node_t *tree, const size_t n_var);
 static void GnrtAssign(const node_t *tree, const size_t n_var);
 static void GnrtWhile(const node_t *tree, const size_t n_var);
 static void GnrtCallFunc(const node_t *tree, const size_t n_var);
+
 static void GnrtReturn(const node_t *tree, const size_t n_var);
 static void GnrtBreak(const node_t *tree);
 static void GnrtContinue(const node_t *tree);
+
+static void GnrtDeref(const node_t *tree, const size_t n_var);
 
 static size_t GetMaxID(const node_t *tree);
 /*---------------------------------------------*/
@@ -165,6 +168,8 @@ static void GnrtOp(const node_t *tree, const size_t n_var)
 	case TP_SYMB:
 	case TP_DECL_FUNC:
 	case TP_LITERAL:
+	case TP_DEREF:
+	case TP_TAKEADDR:
 	default:
 		err_exit_msg("invalid type");
 	}
@@ -204,6 +209,15 @@ static void GnrtArifm(const node_t *tree, const size_t n_var)
 		print_asm("mov rbp, rsp\n"
 				  "add rbp, %lu ;calculate var pos in stack\n"
 				  "push [rbp] ;push var\n\n",
+				  tree->data.val.id);
+		return;
+	case TP_DEREF:
+		GnrtDeref(tree, n_var);
+		return;
+	case TP_TAKEADDR:
+		print_asm("mov rbp, %lu\n"
+				  "add rbp, rsp\n"
+				  "push rbp ;&\n\n",
 				  tree->data.val.id);
 		return;
 	case TP_OP:
@@ -417,10 +431,14 @@ static void GnrtExpr(const node_t *tree, const size_t n_var)
 	{
 	case TP_NUM:
 	case TP_VAR:
+	case TP_TAKEADDR:
 		GnrtArifm(tree, n_var);
 		break;
 	case TP_CALL_FUNC:
 		GnrtCallFunc(tree, n_var);
+		break;
+	case TP_DEREF:
+		GnrtDeref(tree, n_var);
 		break;
 	case TP_OP:
 		switch(tree->data.val.op)
@@ -550,15 +568,27 @@ static void GnrtAssign(const node_t *tree, const size_t n_var)
 		err_exit_msg("is not 'assignment'");
 	if(!IS_BINNODE(tree))
 		err_exit_msg("is not binary");
-	if(LEFT(tree)->data.type != TP_VAR)
-		err_exit_msg("lvalue must be variable");
 
 	GnrtExpr(RIGHT(tree), n_var);
 
-	print_asm("mov rbp, rsp\n"
-			  "add rbp, %lu ;calculate var pos in stack\n"
-			  "pop [rbp] ;assign var a value\n\n",
-			  LEFT(tree)->data.val.id);
+	if(LEFT(tree)->data.type == TP_VAR)
+	{
+		print_asm("mov rbp, rsp\n"
+				  "add rbp, %lu ;calculate var pos in stack\n"
+				  "pop [rbp] ;assign var a value\n\n",
+				  LEFT(tree)->data.val.id);
+	}
+	else if(LEFT(tree)->data.type == TP_DEREF)
+	{
+		if(!CHILD_EXISTS(LEFT(tree)->child))
+			err_exit_msg("wrong node");
+
+		GnrtExpr(LEFT(tree)->child->node, n_var);
+		print_asm("pop rbx\n"
+				  "pop [rbx] ;assign [] a value\n\n");
+	}
+	else
+		err_exit_msg("lvalue must be variable or dereference ptr");
 }
 
 static void GnrtCallFunc(const node_t *tree, const size_t n_var)
@@ -624,6 +654,7 @@ static void GnrtReturn(const node_t *tree, const size_t n_var)
 
 static void GnrtBreak(const node_t *tree)
 {
+	LEAVE_IF_ERR;
 	assert(tree);
 	if(!IS_(BREAK, tree->data))
 		err_exit_msg("is not 'break'");
@@ -633,11 +664,27 @@ static void GnrtBreak(const node_t *tree)
 
 static void GnrtContinue(const node_t *tree)
 {
+	LEAVE_IF_ERR;
 	assert(tree);
 	if(!IS_(CONTINUE, tree->data))
 		err_exit_msg("is not 'continue'");
 
 	print_asm("jmp .Lloop%lu\t;continue\n", LOOP_LBL_CNT - 2);
+}
+
+static void GnrtDeref(const node_t *tree, const size_t n_var)
+{
+	LEAVE_IF_ERR;
+	assert(tree);
+	if(tree->data.type != TP_DEREF)
+		err_exit_msg("is not '&'");
+	if(!CHILD_EXISTS(tree->child))
+		err_exit_msg("wrong node");
+
+	GnrtExpr(tree->child->node, n_var);
+
+	print_asm("pop rbp\n"
+			  "push [rbp] ;push deref ptr\n\n");
 }
 
 /* counts number of variables in tree */

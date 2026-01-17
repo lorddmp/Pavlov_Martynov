@@ -1,12 +1,15 @@
 #undef ROOT
 #undef OP_SEQ
 #undef PARAM
+#undef DEREF
 #undef OPN_BRC
 #undef CLS_BRC
 #undef OPN_PAR
 #undef CLS_PAR
 #undef SEMICOLON
 #undef COMMA
+#undef OPN_BRK
+#undef CLS_BRK
 #undef EQ
 #undef ASSIGN
 #undef ADD
@@ -30,6 +33,8 @@
 #undef FUNC_DECL
 #undef FUNC_CALL
 #undef VAR
+#undef TAKEADDR
+#undef NUM
 #undef CHILD_EXISTS
 #undef IS_BINNODE
 #undef LEFT
