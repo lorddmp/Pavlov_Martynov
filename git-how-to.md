@@ -2,26 +2,16 @@
 
 Markdown is a lightweight markup language used for formatting plain text.
 
-## Basic Formatting
+## How to create ssh key 
 
-You can make text bold or *italic*.
+First of all you need to sign up && log in to Github && install git on your PC.
+Next, generate ssh using 'ssh keygen'. Check your key at ~/.ssh/.
+Finally, connect ssh to github.
 
-### Lists
+### How to clone (are you clown?) repository from github
 
-Here is an unordered list:
-*   Item one
-*   Item two
+Type in bash the follow command:
+```bash
+git clone <repo_url>
 
-Here is an ordered list:
-1.  First step
-2.  Second step
 
-### Links and Code
-
-Visit the [Markdown Guide](https://www.markdownguide.org) for more info.
-
-You can also include inline code, like print("Hello, world!"), or a full code block:
-
-```python
-def greet(name):
-    return f"Hello, {name}!"
